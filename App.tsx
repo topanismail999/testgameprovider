@@ -8,14 +8,15 @@ const GAMES = [
   { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: '🐟', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
   { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: '⭐', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
 ];
+
 const PROMOS = [
-  { id: 1, title: "BONUS NEW MEMBER 100%", sub: "Berlaku untuk Semua Provider Slot", color: "from-indigo-600 to-blue-900" },
-  { id: 2, title: "CASHBACK MINGGUAN 5%", sub: "Dibagikan Setiap Hari Selasa", color: "from-red-600 to-rose-950" },
+  { id: 1, color: "from-indigo-600 to-blue-900" },
+  { id: 2, color: "from-red-600 to-rose-950" },
 ];
 
 export default function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
-  const [user, setUser] = useState<{username: string, balance: number} | null>(null);
+  const [user, setUser] = useState<{username: string, balance: number, win_rate?: number} | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [jackpot, setJackpot] = useState(8234567890);
@@ -25,7 +26,35 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ username: '', password: '', amount: '' });
 
+  // STATE DINAMIS DARI ADMIN
+  const [config, setConfig] = useState({
+    headerName: 'NEXUSHUB',
+    bannerTitle: 'BONUS NEW MEMBER 100%',
+    bannerSub: 'Berlaku untuk Semua Provider Slot'
+  });
+
   useEffect(() => {
+    // 1. Ambil Konfigurasi dari Admin
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('settings').select('*');
+      if (data) {
+        const newConfig = { ...config };
+        data.forEach(item => {
+          if (item.key === 'header_name') newConfig.headerName = item.value;
+          if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
+          if (item.key === 'banner_sub') newConfig.bannerSub = item.value;
+        });
+        setConfig(newConfig);
+      }
+    };
+    fetchSettings();
+
+    // 2. Realtime Settings Listener
+    const settingsChannel = supabase.channel('realtime-settings')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, () => fetchSettings())
+      .subscribe();
+
+    // 3. Auth Session
     const checkSession = async () => {
       const saved = localStorage.getItem('nexus_session');
       if (saved) {
@@ -35,10 +64,11 @@ export default function App() {
     };
     checkSession();
 
+    // 4. Timers & Global Realtime
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
     
-    const channel = supabase.channel('realtime-client')
+    const clientChannel = supabase.channel('realtime-client')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload: any) => {
         if (user && payload.new.username === user.username) setUser(payload.new);
       })
@@ -49,7 +79,12 @@ export default function App() {
 
     if (user) fetchHistory(user.username);
 
-    return () => { clearInterval(pTimer); clearInterval(jTimer); supabase.removeChannel(channel); };
+    return () => { 
+      clearInterval(pTimer); 
+      clearInterval(jTimer); 
+      supabase.removeChannel(settingsChannel); 
+      supabase.removeChannel(clientChannel);
+    };
   }, [user?.username]);
 
   const fetchHistory = async (username: string) => {
@@ -80,21 +115,13 @@ export default function App() {
 
   const handleTransaction = async () => {
     if (!user || !formData.amount || Number(formData.amount) < 25000) return alert("Minimal nominal IDR 25,000!");
-    
     setIsLoading(true);
     const { error } = await supabase.from('transactions').insert([
-      { 
-        username: user.username, 
-        type: activeView, 
-        amount: Number(formData.amount),
-        status: 'PENDING'
-      }
+      { username: user.username, type: activeView, amount: Number(formData.amount), status: 'PENDING' }
     ]);
-
     setIsLoading(false);
-    if (error) {
-      alert("Gagal: " + error.message);
-    } else {
+    if (error) alert("Gagal: " + error.message);
+    else {
       alert(`Permintaan ${activeView} Berhasil Dikirim!`);
       setFormData({ ...formData, amount: '' });
       fetchHistory(user.username);
@@ -115,21 +142,19 @@ export default function App() {
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView('HOME')}>
-          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]">N</div>
-          <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">NEXUS<span className="text-yellow-500 not-italic">HUB</span></h1>
+          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]">
+            {config.headerName[0]}
+          </div>
+          <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">
+            {config.headerName.includes('HUB') ? config.headerName.split('HUB')[0] : config.headerName}
+            <span className="text-yellow-500 not-italic">{config.headerName.includes('HUB') ? 'HUB' : ''}</span>
+          </h1>
         </div>
         
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-2">
-              {/* TOMBOL RIWAYAT TERPISAH */}
-              <button 
-                onClick={() => setShowHistory(true)}
-                className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all shadow-inner"
-              >
-                🕒
-              </button>
-
+              <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all shadow-inner">🕒</button>
               <div className="bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10 hidden md:block text-center shadow-inner">
                 <p className="text-[8px] text-slate-500 font-black uppercase">ID: {user.username}</p>
                 <p className="text-sm font-black text-emerald-400 font-mono italic tracking-tighter">IDR {user.balance.toLocaleString('id-ID')}</p>
@@ -145,14 +170,13 @@ export default function App() {
         </div>
       </nav>
 
-      {/* TRANSACTION HISTORY SIDEBAR (SLIDE OVER) */}
+      {/* TRANSACTION HISTORY SIDEBAR */}
       <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ease-in-out backdrop-blur-2xl bg-opacity-95 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
          <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-8">
                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Transaction History</h3>
                <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white font-black">✕</button>
             </div>
-            
             <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar pr-2">
                {history.length === 0 ? (
                   <div className="text-center py-20 opacity-20">
@@ -165,9 +189,7 @@ export default function App() {
                         <div className={`absolute top-0 left-0 w-1 h-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500' : 'bg-yellow-600'}`}></div>
                         <div className="flex justify-between items-start mb-2">
                            <p className={`text-[10px] font-black uppercase ${trx.type === 'DEPOSIT' ? 'text-blue-400' : 'text-orange-400'}`}>{trx.type}</p>
-                           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500 animate-pulse'}`}>
-                              {trx.status}
-                           </span>
+                           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500 animate-pulse'}`}>{trx.status}</span>
                         </div>
                         <p className="text-sm font-black text-white font-mono tracking-tighter italic">IDR {trx.amount.toLocaleString()}</p>
                         <p className="text-[8px] text-slate-500 mt-1 uppercase font-bold">{new Date(trx.created_at).toLocaleString()}</p>
@@ -181,7 +203,6 @@ export default function App() {
          </div>
       </div>
 
-      {/* OVERLAY UNTUK HISTORY */}
       {showHistory && <div onClick={() => setShowHistory(false)} className="fixed inset-0 z-[115] bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>}
 
       {/* VIEW CONTROLLER */}
@@ -214,18 +235,17 @@ export default function App() {
         </div>
       ) : (
         <>
-          {/* BANNER PROMO */}
+          {/* BANNER PROMO DARI ADMIN */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden bg-gradient-to-br ${PROMOS[currentPromo].color} transition-all duration-1000 shadow-2xl border border-white/10`}>
               <div className="relative z-10 h-full flex flex-col justify-center">
-                <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase leading-none drop-shadow-lg">{PROMOS[currentPromo].title}</h2>
-                <p className="text-sm text-white/70 mt-2 font-bold uppercase tracking-widest">{PROMOS[currentPromo].sub}</p>
+                <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase leading-none drop-shadow-lg">{config.bannerTitle}</h2>
+                <p className="text-sm text-white/70 mt-2 font-bold uppercase tracking-widest">{config.bannerSub}</p>
               </div>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
             </div>
           </div>
 
-          {/* JACKPOT DISPLAY */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div className="bg-gradient-to-b from-slate-900 to-black rounded-3xl p-6 border border-yellow-500/20 text-center shadow-2xl">
               <p className="text-yellow-500 font-black text-[9px] uppercase tracking-[0.5em] mb-2 opacity-70">Global Jackpot</p>
@@ -233,7 +253,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* QUICK BUTTONS */}
           <div className="max-w-7xl mx-auto px-6 mt-8 flex gap-3">
              <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all">
                 <p className="text-xs font-black text-emerald-400 uppercase italic group-hover:scale-110 transition-transform">Deposit</p>
@@ -243,14 +262,12 @@ export default function App() {
              </button>
           </div>
 
-          {/* PROVIDER FILTER */}
           <div className="max-w-7xl mx-auto px-6 mt-10 overflow-x-auto no-scrollbar flex gap-2">
             {PROVIDERS.map(p => (
               <button key={p} onClick={() => setActiveTab(p)} className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase whitespace-nowrap transition-all border ${activeTab === p ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg scale-105' : 'bg-slate-900 text-slate-400 border-white/5'}`}>{p}</button>
             ))}
           </div>
 
-          {/* GAMES GRID */}
           <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
             {filteredGames.map((game) => (
               <div key={game.id} onClick={() => { setIsLoading(true); setTimeout(() => { setSelectedGameUrl(game.demoUrl); setIsLoading(false); }, 1000); }} className="group cursor-pointer">
@@ -268,7 +285,6 @@ export default function App() {
         </>
       )}
 
-      {/* GAME OVERLAY */}
       {selectedGameUrl && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col">
           <div className="h-12 bg-slate-950 flex justify-between items-center px-6 border-b border-white/10">
@@ -279,7 +295,6 @@ export default function App() {
         </div>
       )}
 
-      {/* LOADING OVERLAY */}
       {isLoading && (
         <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
           <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.5)]"></div>
