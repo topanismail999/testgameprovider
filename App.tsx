@@ -26,15 +26,35 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ username: '', password: '', amount: '' });
 
-  // STATE DINAMIS DARI ADMIN
   const [config, setConfig] = useState({
     headerName: 'NEXUSHUB',
     bannerTitle: 'BONUS NEW MEMBER 100%',
     bannerSub: 'Berlaku untuk Semua Provider Slot'
   });
 
+  // --- LOGIKA BARU: ENGINE KONTROL ---
+  const openGame = (gameUrl: string) => {
+    if (!user) {
+      setActiveView('LOGIN');
+      return;
+    }
+    if (user.balance < 1000) {
+      alert("Saldo anda tidak mencukupi untuk bermain!");
+      setActiveView('DEPOSIT');
+      return;
+    }
+
+    setIsLoading(true);
+    // Simulasi Engine: Mengirimkan sinyal "Control Active" ke logger (opsional)
+    console.log(`Engine: User ${user.username} playing with WinRate ${user.win_rate}%`);
+    
+    setTimeout(() => {
+      setSelectedGameUrl(gameUrl);
+      setIsLoading(false);
+    }, 1500);
+  };
+
   useEffect(() => {
-    // 1. Ambil Konfigurasi dari Admin
     const fetchSettings = async () => {
       const { data } = await supabase.from('settings').select('*');
       if (data) {
@@ -49,12 +69,10 @@ export default function App() {
     };
     fetchSettings();
 
-    // 2. Realtime Settings Listener
     const settingsChannel = supabase.channel('realtime-settings')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, () => fetchSettings())
       .subscribe();
 
-    // 3. Auth Session
     const checkSession = async () => {
       const saved = localStorage.getItem('nexus_session');
       if (saved) {
@@ -64,13 +82,19 @@ export default function App() {
     };
     checkSession();
 
-    // 4. Timers & Global Realtime
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
     
+    // FIX: REALTIME UNTUK SALDO & WINRATE (Penting untuk Admin Control)
     const clientChannel = supabase.channel('realtime-client')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload: any) => {
-        if (user && payload.new.username === user.username) setUser(payload.new);
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'players',
+        filter: user ? `username=eq.${user.username}` : undefined 
+      }, (payload: any) => {
+        console.log("Realtime Update Received:", payload.new);
+        setUser(payload.new);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
         if (user) fetchHistory(user.username);
@@ -99,7 +123,9 @@ export default function App() {
   const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
     setIsLoading(true);
     if (type === 'REGISTER') {
-      const { error } = await supabase.from('players').insert([{ username: formData.username, password: formData.password, balance: 0 }]);
+      const { error } = await supabase.from('players').insert([
+        { username: formData.username, password: formData.password, balance: 0, win_rate: 50 } // Default Winrate 50
+      ]);
       if (error) alert("Gagal Daftar!"); else alert("Berhasil! Silakan Login.");
     } else {
       const { data } = await supabase.from('players').select('*').eq('username', formData.username).eq('password', formData.password).single();
@@ -172,7 +198,7 @@ export default function App() {
 
       {/* TRANSACTION HISTORY SIDEBAR */}
       <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ease-in-out backdrop-blur-2xl bg-opacity-95 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
-         <div className="p-6 h-full flex flex-col">
+          <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-8">
                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Transaction History</h3>
                <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white font-black">✕</button>
@@ -188,8 +214,8 @@ export default function App() {
                      <div key={trx.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 relative group overflow-hidden">
                         <div className={`absolute top-0 left-0 w-1 h-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500' : 'bg-yellow-600'}`}></div>
                         <div className="flex justify-between items-start mb-2">
-                           <p className={`text-[10px] font-black uppercase ${trx.type === 'DEPOSIT' ? 'text-blue-400' : 'text-orange-400'}`}>{trx.type}</p>
-                           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500 animate-pulse'}`}>{trx.status}</span>
+                            <p className={`text-[10px] font-black uppercase ${trx.type === 'DEPOSIT' ? 'text-blue-400' : 'text-orange-400'}`}>{trx.type}</p>
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500 animate-pulse'}`}>{trx.status}</span>
                         </div>
                         <p className="text-sm font-black text-white font-mono tracking-tighter italic">IDR {trx.amount.toLocaleString()}</p>
                         <p className="text-[8px] text-slate-500 mt-1 uppercase font-bold">{new Date(trx.created_at).toLocaleString()}</p>
@@ -200,7 +226,7 @@ export default function App() {
             <div className="pt-6 border-t border-white/5">
                <button onClick={() => setShowHistory(false)} className="w-full bg-slate-800 py-3 rounded-xl text-[9px] font-black uppercase text-slate-400 hover:text-white transition-all">Close History</button>
             </div>
-         </div>
+          </div>
       </div>
 
       {showHistory && <div onClick={() => setShowHistory(false)} className="fixed inset-0 z-[115] bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>}
@@ -254,10 +280,10 @@ export default function App() {
           </div>
 
           <div className="max-w-7xl mx-auto px-6 mt-8 flex gap-3">
-             <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all">
+             <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all shadow-lg">
                 <p className="text-xs font-black text-emerald-400 uppercase italic group-hover:scale-110 transition-transform">Deposit</p>
              </button>
-             <button onClick={() => user ? setActiveView('WITHDRAW') : setActiveView('LOGIN')} className="flex-1 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-3xl text-center group hover:bg-yellow-500/20 transition-all">
+             <button onClick={() => user ? setActiveView('WITHDRAW') : setActiveView('LOGIN')} className="flex-1 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-3xl text-center group hover:bg-yellow-500/20 transition-all shadow-lg">
                 <p className="text-xs font-black text-yellow-500 uppercase italic group-hover:scale-110 transition-transform">Withdraw</p>
              </button>
           </div>
@@ -268,13 +294,13 @@ export default function App() {
             ))}
           </div>
 
-          <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+          <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5 font-black uppercase">
             {filteredGames.map((game) => (
-              <div key={game.id} onClick={() => { setIsLoading(true); setTimeout(() => { setSelectedGameUrl(game.demoUrl); setIsLoading(false); }, 1000); }} className="group cursor-pointer">
+              <div key={game.id} onClick={() => openGame(game.demoUrl)} className="group cursor-pointer">
                 <div className="relative aspect-[3/4] rounded-[2.5rem] bg-slate-900 border border-white/5 overflow-hidden transition-all duration-500 group-hover:border-yellow-500/50 group-hover:-translate-y-2 shadow-xl shadow-black/50">
                   <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-b from-slate-800 to-black group-hover:scale-110 transition-transform duration-700">{game.image}</div>
                   <div className="absolute bottom-0 left-0 w-full p-3 bg-black/70 backdrop-blur-md border-t border-white/5">
-                    <p className="text-[9px] font-black text-emerald-400 text-center uppercase tracking-widest">RTP {game.rtp}%</p>
+                    <p className="text-[9px] font-black text-emerald-400 text-center uppercase tracking-widest">GACOR RTP {game.rtp}%</p>
                   </div>
                   <div className="absolute top-4 right-4 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></div>
                 </div>
@@ -288,8 +314,11 @@ export default function App() {
       {selectedGameUrl && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col">
           <div className="h-12 bg-slate-950 flex justify-between items-center px-6 border-b border-white/10">
-            <p className="text-[10px] font-black text-yellow-500 uppercase italic">Nexus Slot Engine - {user ? 'REAL MODE' : 'DEMO MODE'}</p>
-            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-4 py-1 rounded text-[10px] font-black uppercase shadow-lg">Close Game</button>
+            <div className="flex items-center gap-3">
+              <p className="text-[10px] font-black text-yellow-500 uppercase italic">Control Engine: {user?.win_rate}% Active</p>
+              <div className="h-2 w-2 bg-emerald-500 rounded-full animate-ping"></div>
+            </div>
+            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-4 py-1 rounded text-[10px] font-black uppercase shadow-lg">Exit Game</button>
           </div>
           <iframe src={selectedGameUrl} className="flex-1 w-full border-none" allowFullScreen title="Slot Game" />
         </div>
@@ -298,7 +327,7 @@ export default function App() {
       {isLoading && (
         <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
           <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.5)]"></div>
-          <p className="text-[9px] font-black text-yellow-500 uppercase tracking-[0.5em] animate-pulse">Menghubungkan Ke Server...</p>
+          <p className="text-[9px] font-black text-yellow-500 uppercase tracking-[0.5em] animate-pulse italic">Menghubungkan Ke Slot Engine...</p>
         </div>
       )}
 
