@@ -17,6 +17,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
   const [user, setUser] = useState<{username: string, balance: number} | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [jackpot, setJackpot] = useState(8234567890);
   const [currentPromo, setCurrentPromo] = useState(0);
   const [activeTab, setActiveTab] = useState("ALL");
@@ -37,7 +38,6 @@ export default function App() {
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
     
-    // REALTIME: Pantau Perubahan Saldo & Riwayat Transaksi
     const channel = supabase.channel('realtime-client')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload: any) => {
         if (user && payload.new.username === user.username) setUser(payload.new);
@@ -57,7 +57,7 @@ export default function App() {
       .select('*')
       .eq('username', username)
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(10);
     if (data) setHistory(data);
   };
 
@@ -106,6 +106,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-32 overflow-x-hidden selection:bg-yellow-500">
+      
       {/* RUNNING TEXT */}
       <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest">
         <div className="animate-marquee inline-block">GATES OF OLYMPUS 1000 GACOR PARAH ● DEPOSIT QRIS OTOMATIS ● WD TANPA RIBET ● HUBUNGI CS JIKA ADA KENDALA ●</div>
@@ -117,9 +118,18 @@ export default function App() {
           <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]">N</div>
           <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">NEXUS<span className="text-yellow-500 not-italic">HUB</span></h1>
         </div>
+        
         <div className="flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* TOMBOL RIWAYAT TERPISAH */}
+              <button 
+                onClick={() => setShowHistory(true)}
+                className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all shadow-inner"
+              >
+                🕒
+              </button>
+
               <div className="bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10 hidden md:block text-center shadow-inner">
                 <p className="text-[8px] text-slate-500 font-black uppercase">ID: {user.username}</p>
                 <p className="text-sm font-black text-emerald-400 font-mono italic tracking-tighter">IDR {user.balance.toLocaleString('id-ID')}</p>
@@ -135,6 +145,45 @@ export default function App() {
         </div>
       </nav>
 
+      {/* TRANSACTION HISTORY SIDEBAR (SLIDE OVER) */}
+      <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ease-in-out backdrop-blur-2xl bg-opacity-95 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
+         <div className="p-6 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-8">
+               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Transaction History</h3>
+               <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white font-black">✕</button>
+            </div>
+            
+            <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar pr-2">
+               {history.length === 0 ? (
+                  <div className="text-center py-20 opacity-20">
+                     <p className="text-4xl mb-4">📜</p>
+                     <p className="text-[10px] font-black uppercase tracking-widest">No Records Found</p>
+                  </div>
+               ) : (
+                  history.map(trx => (
+                     <div key={trx.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 relative group overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-1 h-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500' : 'bg-yellow-600'}`}></div>
+                        <div className="flex justify-between items-start mb-2">
+                           <p className={`text-[10px] font-black uppercase ${trx.type === 'DEPOSIT' ? 'text-blue-400' : 'text-orange-400'}`}>{trx.type}</p>
+                           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500 animate-pulse'}`}>
+                              {trx.status}
+                           </span>
+                        </div>
+                        <p className="text-sm font-black text-white font-mono tracking-tighter italic">IDR {trx.amount.toLocaleString()}</p>
+                        <p className="text-[8px] text-slate-500 mt-1 uppercase font-bold">{new Date(trx.created_at).toLocaleString()}</p>
+                     </div>
+                  ))
+               )}
+            </div>
+            <div className="pt-6 border-t border-white/5">
+               <button onClick={() => setShowHistory(false)} className="w-full bg-slate-800 py-3 rounded-xl text-[9px] font-black uppercase text-slate-400 hover:text-white transition-all">Close History</button>
+            </div>
+         </div>
+      </div>
+
+      {/* OVERLAY UNTUK HISTORY */}
+      {showHistory && <div onClick={() => setShowHistory(false)} className="fixed inset-0 z-[115] bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>}
+
       {/* VIEW CONTROLLER */}
       {activeView === 'LOGIN' || activeView === 'REGISTER' ? (
         <div className="max-w-md mx-auto px-6 mt-12 animate-in fade-in zoom-in duration-300">
@@ -149,11 +198,10 @@ export default function App() {
            </div>
         </div>
       ) : activeView === 'DEPOSIT' || activeView === 'WITHDRAW' ? (
-        <div className="max-w-md mx-auto px-6 mt-8 space-y-6">
-           {/* FORM */}
-           <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center animate-in slide-in-from-bottom-10 duration-500">
+        <div className="max-w-md mx-auto px-6 mt-8 animate-in slide-in-from-bottom-10 duration-500">
+           <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center">
               <h2 className="text-2xl font-black text-white italic uppercase mb-2 tracking-tighter">{activeView} SALDO</h2>
-              <p className="text-[10px] font-bold text-slate-500 uppercase mb-8 italic">ID: {user?.username} • Saldo: IDR {user?.balance.toLocaleString()}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase mb-8 italic">ID: {user?.username}</p>
               <div className="space-y-6">
                  <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
                     <p className="text-[10px] text-slate-500 font-black uppercase mb-2">Masukkan Nominal</p>
@@ -161,28 +209,6 @@ export default function App() {
                  </div>
                  <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl">Kirim Permintaan</button>
                  <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 font-black uppercase">Batal & Kembali</button>
-              </div>
-           </div>
-
-           {/* MINI HISTORY (Pemain bisa melihat statusnya langsung) */}
-           <div className="bg-black/40 border border-white/5 rounded-[2.5rem] p-6">
-              <h4 className="text-[10px] font-black text-white uppercase mb-4 opacity-50 italic">Riwayat Terakhir</h4>
-              <div className="space-y-3">
-                 {history.length === 0 && <p className="text-[9px] text-slate-600 uppercase text-center py-4">Belum ada transaksi</p>}
-                 {history.map(trx => (
-                   <div key={trx.id} className="flex justify-between items-center bg-white/5 p-3 rounded-2xl border border-white/5">
-                      <div>
-                        <p className="text-[10px] font-black text-white uppercase">{trx.type}</p>
-                        <p className="text-[9px] font-mono text-slate-500">{new Date(trx.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-yellow-500 italic">IDR {trx.amount.toLocaleString()}</p>
-                        <p className={`text-[8px] font-black uppercase ${trx.status === 'SUCCESS' ? 'text-emerald-500' : trx.status === 'REJECTED' ? 'text-red-500' : 'text-yellow-600 animate-pulse'}`}>
-                          {trx.status}
-                        </p>
-                      </div>
-                   </div>
-                 ))}
               </div>
            </div>
         </div>
