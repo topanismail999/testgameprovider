@@ -38,7 +38,7 @@ export default function App() {
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
     
     // Listen to real-time changes
-    const channel = supabase.channel('realtime-players').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload) => {
+    const channel = supabase.channel('realtime-players').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload: any) => {
       if (user && payload.new.username === user.username) setUser(payload.new as any);
     }).subscribe();
 
