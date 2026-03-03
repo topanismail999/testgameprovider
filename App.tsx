@@ -55,9 +55,27 @@ export default function App() {
     setIsLoading(false);
   };
 
-  const handleTransaction = () => {
-    alert("Permintaan " + activeView + " Sebesar IDR " + Number(formData.amount).toLocaleString() + " Telah Dikirim! Menunggu Konfirmasi Admin.");
-    setActiveView('HOME');
+  // FUNGSI TRANSAKSI YANG SUDAH TERHUBUNG KE DATABASE
+  const handleTransaction = async () => {
+    if (!user || !formData.amount || Number(formData.amount) <= 0) return alert("Masukkan nominal valid!");
+    
+    setIsLoading(true);
+    const { error } = await supabase.from('transactions').insert([
+      { 
+        username: user.username, 
+        type: activeView, // DEPOSIT atau WITHDRAW
+        amount: Number(formData.amount),
+        status: 'PENDING'
+      }
+    ]);
+
+    setIsLoading(false);
+    if (error) {
+      alert("Gagal mengirim riquest: " + error.message);
+    } else {
+      alert(`Riquest ${activeView} Sebesar IDR ${Number(formData.amount).toLocaleString()} Berhasil Dikirim! Mohon tunggu konfirmasi admin.`);
+      setActiveView('HOME');
+    }
   };
 
   const filteredGames = activeTab === "ALL" ? GAMES : GAMES.filter(g => g.provider === activeTab);
