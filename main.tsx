@@ -12,162 +12,180 @@ interface Game {
   demoUrl: string;
 }
 
-const PROVIDERS = ["ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "JOKER", "SPADEGAMING"];
+const PROVIDERS = ["ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "JOKER", "SPADEGAMING", "CQ9", "MICROGAMING"];
 
 const GAMES: Game[] = [
-  // Pragmatic Play
   { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: '⚡', hot: true, rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: '⭐', hot: false, rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
-  
-  // PG Soft (Mockup Link)
   { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: '🀄', hot: true, rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: '🐱', hot: false, rtp: 96.8, demoUrl: 'https://m.pgsoft-games.com/105/index.html' },
-  
-  // Habanero
   { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: '🐟', hot: true, rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
-  
-  // Joker & Others
+  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: '⭐', hot: false, rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: '🐱', hot: false, rtp: 96.8, demoUrl: 'https://m.pgsoft-games.com/105/index.html' },
   { id: 'roma', name: 'Roma', provider: 'JOKER', image: '🛡️', hot: true, rtp: 95.5, demoUrl: 'https://www.jokerapp678.net/demo/roma' },
-  { id: 'sugar-rush', name: 'Sugar Rush', provider: 'PRAGMATIC', image: '🍬', hot: true, rtp: 97.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20sugarrush&lang=en&cur=IDR' },
-  { id: 'legacy-kong', name: 'Legacy of Kong', provider: 'SPADEGAMING', image: '🦍', hot: false, rtp: 94.2, demoUrl: 'https://demo.spadegaming.com/legacy-kong' },
 ];
 
-const PROMOS = [
-  { id: 1, title: "BONUS NEW MEMBER 100%", sub: "Berlaku untuk Semua Provider Slot", color: "from-indigo-600 to-blue-900" },
-  { id: 2, title: "CASHBACK MINGGUAN 5%", sub: "Dibagikan Setiap Hari Selasa", color: "from-red-600 to-rose-950" },
+const WINNERS = [
+  { user: "user_77***", win: "IDR 2.450.000", game: "Gates of Olympus" },
+  { user: "jack***01", win: "IDR 8.120.000", game: "Mahjong Ways 2" },
+  { user: "slot***pro", win: "IDR 1.200.000", game: "Koi Gate" },
 ];
 
 export default function GameApp() {
   const [selectedGameUrl, setSelectedGameUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [currentPromo, setCurrentPromo] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("ALL");
+  const [jackpot, setJackpot] = useState(8234567890);
 
-  // Auto-slide Promo
+  // Jackpot Counter Animation
   useEffect(() => {
-    const timer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
-    return () => clearInterval(timer);
+    const interval = setInterval(() => {
+      setJackpot(prev => prev + Math.floor(Math.random() * 5000));
+    }, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Filter Logic
-  const filteredGames = activeTab === "ALL" 
-    ? GAMES 
-    : GAMES.filter(g => g.provider === activeTab);
-
-  const launchGame = (url: string) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setSelectedGameUrl(url);
-      setIsLoading(false);
-    }, 1000);
-  };
+  const filteredGames = activeTab === "ALL" ? GAMES : GAMES.filter(g => g.provider === activeTab);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-20 overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-32">
       
-      {/* --- NAVBAR --- */}
-      <nav className="sticky top-0 z-40 bg-[#020617]/90 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center font-black text-black">N</div>
-          <h1 className="font-black text-white italic uppercase tracking-tighter">NEXUS<span className="text-yellow-500 not-italic">HUB</span></h1>
+      {/* 1. TOP MARQUEE (RUNNING TEXT) */}
+      <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600">
+        <div className="animate-marquee inline-block font-black text-[10px] uppercase tracking-tighter">
+          Selamat Datang di NEXUSHUB - Situs Slot Terpercaya dengan Winrate Tertinggi 98.5% ● Maintenance Rutin Setiap Hari Selasa Jam 07:00 WIB ● Deposit via QRIS Proses Hanya 5 Detik! ●
         </div>
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-900/80 px-4 py-1.5 rounded-full border border-white/10">
-            <p className="text-[10px] text-emerald-400 font-black font-mono">IDR 12.450.000</p>
-          </div>
+      </div>
+
+      {/* 2. NAVBAR */}
+      <nav className="sticky top-0 z-40 bg-[#020617]/90 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black shadow-[0_0_15px_rgba(234,179,8,0.3)]">N</div>
+          <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">NEXUS<span className="text-yellow-500 not-italic">HUB</span></h1>
+        </div>
+        <div className="flex gap-2">
+          <button className="bg-white/5 border border-white/10 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase hover:bg-white/10">Masuk</button>
+          <button className="bg-yellow-500 text-black px-4 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-lg shadow-yellow-500/20">Daftar</button>
         </div>
       </nav>
 
-      {/* --- HERO BANNER --- */}
+      {/* 3. JACKPOT COUNTER */}
       <div className="max-w-7xl mx-auto px-6 mt-6">
-        <div className={`w-full h-44 md:h-56 rounded-[2rem] p-8 relative overflow-hidden bg-gradient-to-br ${PROMOS[currentPromo].color} transition-all duration-1000 shadow-2xl border border-white/10`}>
-          <div className="relative z-10 h-full flex flex-col justify-center">
-            <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase leading-none">{PROMOS[currentPromo].title}</h2>
-            <p className="text-sm text-white/70 mt-2 font-bold uppercase tracking-widest">{PROMOS[currentPromo].sub}</p>
-            <button className="mt-4 bg-yellow-500 text-black px-6 py-2 rounded-full text-[10px] font-black uppercase w-max shadow-xl hover:scale-105 transition-transform">Daftar Sekarang</button>
-          </div>
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="bg-gradient-to-b from-slate-900 to-black rounded-3xl p-6 border border-yellow-500/30 text-center relative overflow-hidden shadow-2xl">
+          <p className="text-yellow-500 font-black text-[10px] uppercase tracking-[0.5em] mb-2">Global Progressive Jackpot</p>
+          <h2 className="text-4xl md:text-6xl font-black text-white font-mono tracking-tighter">
+            IDR {jackpot.toLocaleString('id-ID')}
+          </h2>
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent"></div>
         </div>
       </div>
 
-      {/* --- PROVIDER SELECTOR --- */}
-      <div className="max-w-7xl mx-auto px-6 mt-10">
-        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
-          {PROVIDERS.map((p) => (
-            <button 
-              key={p} 
-              onClick={() => setActiveTab(p)}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase whitespace-nowrap transition-all border ${
-                activeTab === p ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg shadow-yellow-500/20' : 'bg-slate-900 text-slate-400 border-white/5 hover:border-white/20'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+      {/* 4. PROVIDER TABS */}
+      <div className="max-w-7xl mx-auto px-6 mt-8 overflow-x-auto no-scrollbar flex gap-2">
+        {PROVIDERS.map(p => (
+          <button 
+            key={p} 
+            onClick={() => setActiveTab(p)}
+            className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap transition-all border ${
+              activeTab === p ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg' : 'bg-slate-900 text-slate-500 border-white/5'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
       </div>
 
-      {/* --- GAME GRID --- */}
-      <div className="max-w-7xl mx-auto px-6 mt-6">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-1.5 h-4 bg-yellow-500 rounded-full"></div>
-          <h3 className="font-black text-xs uppercase tracking-widest">Daftar Game <span className="text-yellow-500">{activeTab}</span></h3>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+      {/* 5. MAIN GAMES GRID */}
+      <div className="max-w-7xl mx-auto px-6 mt-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {filteredGames.map((game) => (
-            <div key={game.id} onClick={() => launchGame(game.demoUrl)} className="group cursor-pointer">
-              <div className="aspect-[3/4] rounded-[2rem] bg-slate-900 border border-white/5 relative overflow-hidden transition-all duration-500 group-hover:border-yellow-500/50 group-hover:-translate-y-2">
-                
-                {/* Visual */}
-                <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-b from-slate-800 to-slate-950 group-hover:scale-110 transition-transform duration-700">
+            <div key={game.id} onClick={() => { setIsLoading(true); setTimeout(() => { setSelectedGameUrl(game.demoUrl); setIsLoading(false); }, 1000); }} className="group cursor-pointer">
+              <div className="aspect-[3/4] rounded-3xl bg-slate-900 border border-white/5 relative overflow-hidden transition-all group-hover:border-yellow-500/50 group-hover:-translate-y-2">
+                <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-b from-slate-800 to-black group-hover:scale-110 transition-transform duration-700">
                   {game.image}
                 </div>
-
-                {/* RTP Widget */}
-                <div className="absolute bottom-0 left-0 w-full p-3 bg-black/70 backdrop-blur-md">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[7px] font-black text-white/40 uppercase">RTP Live</span>
-                    <span className="text-[9px] font-black text-emerald-400">{game.rtp}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500" style={{ width: `${game.rtp}%` }}></div>
-                  </div>
+                {/* RTP Label */}
+                <div className="absolute bottom-0 left-0 w-full p-3 bg-black/80 backdrop-blur-md">
+                   <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden mb-1">
+                      <div className="h-full bg-emerald-500" style={{ width: `${game.rtp}%` }}></div>
+                   </div>
+                   <p className="text-[8px] font-black text-center text-emerald-400 uppercase tracking-widest">RTP {game.rtp}%</p>
                 </div>
-
-                {/* Hot Tag */}
-                {game.hot && (
-                  <div className="absolute top-4 left-4 bg-red-600 text-[7px] font-black px-2 py-0.5 rounded-full text-white uppercase italic animate-pulse">Hot</div>
-                )}
               </div>
-              <div className="mt-3 text-center">
-                <h4 className="text-[10px] font-black text-slate-300 uppercase truncate px-2">{game.name}</h4>
-                <p className="text-[7px] font-bold text-slate-600 uppercase tracking-widest">{game.provider}</p>
-              </div>
+              <p className="mt-2 text-[10px] font-bold text-center text-slate-400 uppercase truncate px-2">{game.name}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* --- MODAL GAME --- */}
+      {/* 6. RECENT WINNERS (LIVE FEED) */}
+      <div className="max-w-7xl mx-auto px-6 mt-12">
+        <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            Pemenang Terkini
+          </h3>
+          <div className="space-y-3">
+            {WINNERS.map((w, i) => (
+              <div key={i} className="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/5">
+                <div>
+                  <p className="text-[10px] font-black text-white">{w.user}</p>
+                  <p className="text-[8px] text-slate-500 uppercase">{w.game}</p>
+                </div>
+                <p className="text-[11px] font-black text-emerald-400">{w.win}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 7. FOOTER (CREDIBILITY) */}
+      <footer className="max-w-7xl mx-auto px-6 mt-16 pt-10 border-t border-white/5 text-center">
+        <div className="flex flex-wrap justify-center gap-6 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
+           {/* Placeholder untuk logo bank/provider */}
+           <div className="font-black text-xl italic text-white">BCA</div>
+           <div className="font-black text-xl italic text-white">BNI</div>
+           <div className="font-black text-xl italic text-white">BRI</div>
+           <div className="font-black text-xl italic text-white">QRIS</div>
+        </div>
+        <p className="mt-10 text-[9px] text-slate-600 uppercase font-bold tracking-[0.3em]">
+          &copy; 2024 NEXUSHUB Entertainment. All Rights Reserved. 18+ Only.
+        </p>
+      </footer>
+
+      {/* 8. FLOATING ACTION BUTTON (WHATSAPP) */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-110 transition-transform">
+           <span className="text-white font-black text-xs uppercase">Help</span>
+        </div>
+      </div>
+
+      {/* MODAL & LOADING */}
       {selectedGameUrl && (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-          <div className="h-14 bg-slate-950 flex justify-between items-center px-6 border-b border-white/10">
-            <p className="text-[10px] font-black text-yellow-500 uppercase tracking-tighter italic">Nexus Aggregator v.2.0</p>
-            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-6 py-1.5 rounded-full text-[10px] font-black uppercase transition-transform active:scale-90">Tutup</button>
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-300">
+          <div className="h-12 bg-slate-900 flex justify-between items-center px-6">
+            <p className="text-[10px] font-black text-yellow-500 uppercase italic">Live Game Engine</p>
+            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-4 py-1 rounded text-[10px] font-black">CLOSE</button>
           </div>
           <iframe src={selectedGameUrl} className="flex-1 w-full border-none" allowFullScreen />
         </div>
       )}
 
-      {/* --- LOADING --- */}
       {isLoading && (
-        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
-          <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-[9px] font-black text-yellow-500 uppercase tracking-[0.5em] animate-pulse">Connecting to API...</p>
+        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
+      {/* TAMBAHKAN CSS ANIMASI KE INDEX.CSS ANDA */}
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+          animation: marquee 30s linear infinite;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 }
