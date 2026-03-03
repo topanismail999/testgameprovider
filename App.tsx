@@ -16,6 +16,7 @@ const PROMOS = [
 export default function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
   const [user, setUser] = useState<{username: string, balance: number} | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [jackpot, setJackpot] = useState(8234567890);
   const [currentPromo, setCurrentPromo] = useState(0);
   const [activeTab, setActiveTab] = useState("ALL");
@@ -36,12 +37,29 @@ export default function App() {
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
     
-    const channel = supabase.channel('realtime-players').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload: any) => {
-      if (user && payload.new.username === user.username) setUser(payload.new);
-    }).subscribe();
+    // REALTIME: Pantau Perubahan Saldo & Riwayat Transaksi
+    const channel = supabase.channel('realtime-client')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload: any) => {
+        if (user && payload.new.username === user.username) setUser(payload.new);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        if (user) fetchHistory(user.username);
+      })
+      .subscribe();
+
+    if (user) fetchHistory(user.username);
 
     return () => { clearInterval(pTimer); clearInterval(jTimer); supabase.removeChannel(channel); };
   }, [user?.username]);
+
+  const fetchHistory = async (username: string) => {
+    const { data } = await supabase.from('transactions')
+      .select('*')
+      .eq('username', username)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (data) setHistory(data);
+  };
 
   const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
     setIsLoading(true);
@@ -50,20 +68,24 @@ export default function App() {
       if (error) alert("Gagal Daftar!"); else alert("Berhasil! Silakan Login.");
     } else {
       const { data } = await supabase.from('players').select('*').eq('username', formData.username).eq('password', formData.password).single();
-      if (data) { setUser(data); localStorage.setItem('nexus_session', data.username); setActiveView('HOME'); } else alert("Login Gagal!");
+      if (data) { 
+        setUser(data); 
+        localStorage.setItem('nexus_session', data.username); 
+        fetchHistory(data.username);
+        setActiveView('HOME'); 
+      } else alert("Login Gagal!");
     }
     setIsLoading(false);
   };
 
-  // FUNGSI TRANSAKSI YANG SUDAH TERHUBUNG KE DATABASE
   const handleTransaction = async () => {
-    if (!user || !formData.amount || Number(formData.amount) <= 0) return alert("Masukkan nominal valid!");
+    if (!user || !formData.amount || Number(formData.amount) < 25000) return alert("Minimal nominal IDR 25,000!");
     
     setIsLoading(true);
     const { error } = await supabase.from('transactions').insert([
       { 
         username: user.username, 
-        type: activeView, // DEPOSIT atau WITHDRAW
+        type: activeView, 
         amount: Number(formData.amount),
         status: 'PENDING'
       }
@@ -71,9 +93,11 @@ export default function App() {
 
     setIsLoading(false);
     if (error) {
-      alert("Gagal mengirim riquest: " + error.message);
+      alert("Gagal: " + error.message);
     } else {
-      alert(`Riquest ${activeView} Sebesar IDR ${Number(formData.amount).toLocaleString()} Berhasil Dikirim! Mohon tunggu konfirmasi admin.`);
+      alert(`Permintaan ${activeView} Berhasil Dikirim!`);
+      setFormData({ ...formData, amount: '' });
+      fetchHistory(user.username);
       setActiveView('HOME');
     }
   };
@@ -100,7 +124,7 @@ export default function App() {
                 <p className="text-[8px] text-slate-500 font-black uppercase">ID: {user.username}</p>
                 <p className="text-sm font-black text-emerald-400 font-mono italic tracking-tighter">IDR {user.balance.toLocaleString('id-ID')}</p>
               </div>
-              <button onClick={() => { localStorage.removeItem('nexus_session'); setUser(null); }} className="bg-red-600/10 text-red-500 border border-red-600/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all">Logout</button>
+              <button onClick={() => { localStorage.removeItem('nexus_session'); setUser(null); setHistory([]); }} className="bg-red-600/10 text-red-500 border border-red-600/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all">Logout</button>
             </div>
           ) : (
             <div className="flex gap-2">
@@ -117,25 +141,48 @@ export default function App() {
            <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl text-center">
               <h2 className="text-2xl font-black text-white italic uppercase mb-6 tracking-tighter">{activeView} AKUN</h2>
               <div className="space-y-4">
-                 <input type="text" placeholder="Username" onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none focus:border-yellow-500 transition-all text-center" />
-                 <input type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none focus:border-yellow-500 transition-all text-center" />
+                 <input type="text" placeholder="Username" onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none focus:border-yellow-500 transition-all text-center text-white" />
+                 <input type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none focus:border-yellow-500 transition-all text-center text-white" />
                  <button onClick={() => handleAuth(activeView)} className="w-full bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase tracking-widest mt-4 active:scale-95 transition-transform shadow-lg">Konfirmasi</button>
                  <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 uppercase font-black block w-full mt-4">Kembali ke Beranda</button>
               </div>
            </div>
         </div>
       ) : activeView === 'DEPOSIT' || activeView === 'WITHDRAW' ? (
-        <div className="max-w-md mx-auto px-6 mt-8 animate-in slide-in-from-bottom-10 duration-500">
-           <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center">
+        <div className="max-w-md mx-auto px-6 mt-8 space-y-6">
+           {/* FORM */}
+           <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center animate-in slide-in-from-bottom-10 duration-500">
               <h2 className="text-2xl font-black text-white italic uppercase mb-2 tracking-tighter">{activeView} SALDO</h2>
-              <p className="text-[10px] font-bold text-slate-500 uppercase mb-8 italic">ID: {user?.username}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase mb-8 italic">ID: {user?.username} • Saldo: IDR {user?.balance.toLocaleString()}</p>
               <div className="space-y-6">
                  <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
                     <p className="text-[10px] text-slate-500 font-black uppercase mb-2">Masukkan Nominal</p>
-                    <input type="number" placeholder="Min. 25.000" onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
+                    <input type="number" placeholder="Min. 25.000" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
                  </div>
                  <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl">Kirim Permintaan</button>
                  <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 font-black uppercase">Batal & Kembali</button>
+              </div>
+           </div>
+
+           {/* MINI HISTORY (Pemain bisa melihat statusnya langsung) */}
+           <div className="bg-black/40 border border-white/5 rounded-[2.5rem] p-6">
+              <h4 className="text-[10px] font-black text-white uppercase mb-4 opacity-50 italic">Riwayat Terakhir</h4>
+              <div className="space-y-3">
+                 {history.length === 0 && <p className="text-[9px] text-slate-600 uppercase text-center py-4">Belum ada transaksi</p>}
+                 {history.map(trx => (
+                   <div key={trx.id} className="flex justify-between items-center bg-white/5 p-3 rounded-2xl border border-white/5">
+                      <div>
+                        <p className="text-[10px] font-black text-white uppercase">{trx.type}</p>
+                        <p className="text-[9px] font-mono text-slate-500">{new Date(trx.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-black text-yellow-500 italic">IDR {trx.amount.toLocaleString()}</p>
+                        <p className={`text-[8px] font-black uppercase ${trx.status === 'SUCCESS' ? 'text-emerald-500' : trx.status === 'REJECTED' ? 'text-red-500' : 'text-yellow-600 animate-pulse'}`}>
+                          {trx.status}
+                        </p>
+                      </div>
+                   </div>
+                 ))}
               </div>
            </div>
         </div>
@@ -218,6 +265,8 @@ export default function App() {
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .animate-marquee { animation: marquee 30s linear infinite; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
       `}</style>
     </div>
   );
