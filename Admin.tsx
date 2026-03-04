@@ -9,7 +9,7 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   
-  // Fitur Pencarian Baru
+  // Fitur Pencarian
   const [searchPlayer, setSearchPlayer] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
   
@@ -131,14 +131,14 @@ export default function Admin() {
     await supabase.from('admin_banks').delete().eq('id', id);
   };
 
-  // Logic Filter
-  const filteredPlayers = players.filter(p => 
-    p.username.toLowerCase().includes(searchPlayer.toLowerCase()) || 
-    p.account_number.includes(searchPlayer)
+  // Logic Filter Perbaikan Bug Blank Putih
+  const filteredPlayers = (players || []).filter(p => 
+    (p.username?.toLowerCase() || "").includes(searchPlayer.toLowerCase()) || 
+    (p.account_number?.toString() || "").includes(searchPlayer)
   );
 
-  const filteredTransactions = transactions.filter(t => 
-    t.username.toLowerCase().includes(searchTrx.toLowerCase())
+  const filteredTransactions = (transactions || []).filter(t => 
+    (t.username?.toLowerCase() || "").includes(searchTrx.toLowerCase())
   );
 
   return (
@@ -161,7 +161,6 @@ export default function Admin() {
         <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2>
           
-          {/* Kolom Pencarian Dinamis Berdasarkan Tab */}
           {activeTab === 'PEMAIN' && (
             <div className="relative w-full md:w-80">
               <input 
@@ -219,7 +218,7 @@ export default function Admin() {
                 <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Promo Manager</h4>
                 <div className="space-y-4">
                    <div className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center">
-                        {sysConfig.bannerImage ? <img src={sysConfig.bannerImage} className="w-full h-full object-cover" /> : <span className="text-[10px] font-black text-slate-400">NO IMAGE</span>}
+                        {sysConfig.bannerImage ? <img src={sysConfig.bannerImage} className="w-full h-full object-cover" alt="Banner" /> : <span className="text-[10px] font-black text-slate-400">NO IMAGE</span>}
                    </div>
                    <input type="file" accept="image/*" onChange={handleBannerUpload} className="text-[10px] font-black" />
                    <input type="text" placeholder="Banner Title" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerTitle} onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} />
