@@ -30,6 +30,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedGameUrl, setSelectedGameUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showQrisPayment, setShowQrisPayment] = useState(false);
   const [formData, setFormData] = useState({ username: '', password: '', amount: '', bank_name: 'BCA', account_number: '', target_bank: '' });
   const [adminBanks, setAdminBanks] = useState<any[]>([]);
 
@@ -64,7 +65,9 @@ export default function App() {
     if (banks) {
       setAdminBanks(banks);
       const activeBanks = banks.filter(b => b.is_active);
-      if (activeBanks.length > 0) setFormData(prev => ({...prev, target_bank: `${activeBanks[0].bank_name} - ${activeBanks[0].account_number}`}));
+      if (activeBanks.length > 0 && !formData.target_bank) {
+        setFormData(prev => ({...prev, target_bank: `${activeBanks[0].bank_name} - ${activeBanks[0].account_number}`}));
+      }
     }
   };
 
@@ -142,12 +145,25 @@ export default function App() {
 
   const handleTransaction = async () => {
     if (!user || !formData.amount || Number(formData.amount) < 25000) return alert("Minimal IDR 25,000!");
+    
+    // Jika memilih QRIS tapi belum bayar, munculkan gambar QRIS dulu
+    if (activeView === 'DEPOSIT' && formData.target_bank === 'QRIS' && !showQrisPayment) {
+        setShowQrisPayment(true);
+        return;
+    }
+
     setIsLoading(true);
     const note = activeView === 'DEPOSIT' ? `Ke: ${formData.target_bank}` : `Ke Rek: ${user.bank_name} ${user.account_number}`;
     const { error } = await supabase.from('transactions').insert([{ username: user.username, type: activeView, amount: Number(formData.amount), status: 'PENDING', note }]);
     setIsLoading(false);
+    
     if (error) alert("Gagal: " + error.message);
-    else { alert(`Permintaan ${activeView} Dikirim!`); setFormData({ ...formData, amount: '' }); setActiveView('HOME'); }
+    else { 
+        alert(`Permintaan ${activeView} Dikirim!`); 
+        setFormData({ ...formData, amount: '' }); 
+        setShowQrisPayment(false);
+        setActiveView('HOME'); 
+    }
   };
 
   const openGame = (gameUrl: string) => {
@@ -265,35 +281,47 @@ export default function App() {
               <div className="space-y-6 text-left">
                  {activeView === 'DEPOSIT' && (
                     <div className="space-y-4">
-                        {config.qrisUrl && (
-                            <div className="bg-white p-4 rounded-3xl flex flex-col items-center gap-2 shadow-xl border-4 border-yellow-500">
-                                <p className="text-[9px] font-black text-slate-900 uppercase">Scan QRIS Untuk Deposit Cepat</p>
+                        {/* INTRUKSI QRIS MUNCUL SETELAH KLIK KIRIM */}
+                        {showQrisPayment && config.qrisUrl && formData.target_bank === 'QRIS' && (
+                            <div className="bg-white p-4 rounded-3xl flex flex-col items-center gap-2 shadow-xl border-4 border-yellow-500 animate-in zoom-in duration-300">
+                                <p className="text-[9px] font-black text-slate-900 uppercase">Scan QRIS Untuk Pembayaran</p>
                                 <img src={config.qrisUrl} alt="QRIS" className="w-full h-auto rounded-lg" />
                                 <div className="flex items-center gap-2">
                                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                                    <p className="text-[8px] font-black text-slate-500 uppercase">Proses Otomatis 24 Jam</p>
+                                    <p className="text-[8px] font-black text-slate-500 uppercase italic">Konfirmasi setelah membayar!</p>
                                 </div>
                             </div>
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Pilih Bank Tujuan Deposit:</label>
-                            <select onChange={(e) => setFormData({...formData, target_bank: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-yellow-500 font-bold">
+                            <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Pilih Metode Deposit:</label>
+                            <select 
+                                value={formData.target_bank}
+                                onChange={(e) => {
+                                    setFormData({...formData, target_bank: e.target.value});
+                                    setShowQrisPayment(false);
+                                }} 
+                                className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-yellow-500 font-bold"
+                            >
+                                {config.qrisUrl && <option value="QRIS">QRIS - OTOMATIS 24 JAM</option>}
                                 {adminBanks.filter(b => b.is_active).map(b => (
                                     <option key={b.id} value={`${b.bank_name} - ${b.account_number}`}>
                                         {b.bank_name} ({b.account_number}) A/N {b.holder_name}
                                     </option>
                                 ))}
-                                {adminBanks.filter(b => b.is_active).length === 0 && <option>Semua Bank Offline</option>}
+                                {adminBanks.filter(b => b.is_active).length === 0 && !config.qrisUrl && <option>Semua Bank Offline</option>}
                             </select>
                         </div>
                     </div>
                  )}
                  <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
-                    <input type="number" placeholder="Min. 25.000" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
+                    <label className="text-[9px] font-black uppercase text-slate-500 block text-center mb-2">Jumlah (Minimal 25.000)</label>
+                    <input type="number" placeholder="0" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
                  </div>
-                 <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em]">Kirim Permintaan</button>
-                 <button onClick={() => setActiveView('HOME')} className="text-center text-[10px] text-slate-500 font-black uppercase w-full block">Batal</button>
+                 <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-900/20">
+                    {showQrisPayment ? "SAYA SUDAH MEMBAYAR" : "Kirim Permintaan"}
+                 </button>
+                 <button onClick={() => {setActiveView('HOME'); setShowQrisPayment(false);}} className="text-center text-[10px] text-slate-500 font-black uppercase w-full block">Batal</button>
               </div>
            </div>
         </div>
@@ -337,8 +365,8 @@ export default function App() {
         </>
       )}
 
-      {/* FOOTER BANK STATUS */}
-      <footer className="relative bg-[#020617]/95 backdrop-blur-2xl border-t border-white/10 z-50 py-4 px-6">
+      {/* FOOTER BANK STATUS (RELATIVE POSITION) */}
+      <footer className="relative bg-[#020617]/95 backdrop-blur-2xl border-t border-white/10 py-8 px-6 mt-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap justify-center gap-3">
             {adminBanks.map(b => (
@@ -355,15 +383,15 @@ export default function App() {
             {config.qrisUrl && (
               <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
                 <div className="relative w-8 h-5 bg-white rounded border border-white flex items-center justify-center p-0.5 overflow-hidden text-[7px] font-black text-black">
-                   QRIS
-                   <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-slate-900 bg-emerald-500 animate-pulse"></div>
+                    QRIS
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-slate-900 bg-emerald-500 animate-pulse"></div>
                 </div>
                 <span className="text-[8px] font-black uppercase text-emerald-400">Online</span>
               </div>
             )}
           </div>
           <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">
-            &copy; 2026 {config.headerName} - Trusted Entertainment Platform
+            © 2026 {config.headerName} - Trusted Entertainment Platform
           </p>
         </div>
       </footer>
