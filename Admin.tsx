@@ -12,7 +12,6 @@ export default function Admin() {
   const [searchPlayer, setSearchPlayer] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
   
-  // State Sistem diperbaiki agar tidak mudah crash saat input
   const [sysConfig, setSysConfig] = useState({
     headerName: "",
     accentColor: "#EAB308",
@@ -54,7 +53,6 @@ export default function Admin() {
         if (item.key === 'accent_color') configObj.accentColor = item.value;
         if (item.key === 'banner_image') configObj.bannerImage = item.value;
       });
-      // Gunakan functional update untuk mencegah infinite loop
       setSysConfig(prev => ({ ...prev, ...configObj }));
     }
   }, []);
@@ -67,9 +65,7 @@ export default function Admin() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchData())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, () => {
-         // Hanya fetch jika bukan dari input kita sendiri
-      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, () => fetchSettings())
       .subscribe();
 
     return () => { supabase.removeChannel(adminChannel); };
@@ -84,6 +80,7 @@ export default function Admin() {
       const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
+      
       await supabase.from('settings').upsert({ key: 'banner_image', value: data.publicUrl }, { onConflict: 'key' });
       setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
       alert("Banner Berhasil Diupload!");
@@ -255,7 +252,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Tab Lainnya Tetap Sama */}
         {activeTab === 'ADMIN BANK' && (
             <div className="space-y-6 animate-in fade-in">
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
