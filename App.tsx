@@ -1,377 +1,274 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 
-const PROVIDERS = [
-  "ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "PLAY'N GO", 
-  "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"
-];
-
-const GAMES = [
-  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1CBo5CmOLpgRE4DMomoMnH9xt3ceSkyB9', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1ka_74DGK4T2hCgotjWAYM6t_seA1KpmQ', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
-  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1mU1Hjt1zX6ZdX9LR4KxKVkX0cJO3PQ4P', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1yX4r5AyxtAnMBXnrLn_FdUYSDw1wNAae', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
-  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://lh3.googleusercontent.com/d/1iqfb47e0jeaAPUSvHRnGsmkOrkFkkhtu', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
-  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://lh3.googleusercontent.com/d/1oGBNf9yayXTaElyRvBpwb_XCT21Qnd3p', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
-  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://lh3.googleusercontent.com/d/1QIXTkNy81kNkATDbLRNtJJS65hmN-0ph', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
-  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://lh3.googleusercontent.com/d/1ynQaTvuJ18gWvmj3mwojSJ-mLg3n66uI', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
-  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://lh3.googleusercontent.com/d/1mER0QZ1NzBQQxeZrHxFlIKWAwZoo5wZe', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
-  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://lh3.googleusercontent.com/d/1B23sQQ7yetsivlxTz85bzsGQDQEVkOZd', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
-  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://lh3.googleusercontent.com/d/1HDX2RGKSaH5KXN-RsfphvobeAN4laKCH', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
-];
-
-const PROMOS = [
-  { id: 1, color: "from-indigo-600 to-blue-900" },
-  { id: 2, color: "from-red-600 to-rose-950" },
-];
-
-// LIST BANK/EWALLET
-const BANK_OPTIONS = ["BCA", "BNI", "BRI", "MANDIRI", "DANA", "OVO", "GOPAY", "LINKAJA"];
-
-export default function App() {
-  const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
-  const [user, setUser] = useState<{username: string, balance: number, win_rate?: number, bank_name?: string, account_number?: string} | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [jackpot, setJackpot] = useState(8234567890);
-  const [currentPromo, setCurrentPromo] = useState(0);
-  const [activeTab, setActiveTab] = useState("ALL");
-  const [selectedGameUrl, setSelectedGameUrl] = useState<string | null>(null);
+export default function Admin() {
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'PEMAIN' | 'TRANSAKSI' | 'SISTEM' | 'ADMIN BANK'>('DASHBOARD');
+  const [players, setPlayers] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [adminBanks, setAdminBanks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   
-  // FORM DATA EXTENDED
-  const [formData, setFormData] = useState({ 
-    username: '', 
-    password: '', 
-    amount: '', 
-    bank_name: BANK_OPTIONS[0], 
-    account_number: '',
-    target_bank: '' // Untuk Deposit (Bank Admin)
+  const [sysConfig, setSysConfig] = useState({
+    headerName: "NEXUSHUB",
+    accentColor: "#EAB308",
+    bannerTitle: "BONUS NEW MEMBER 100%",
+    bannerSub: "Berlaku untuk Semua Provider Slot",
+    bannerImage: "" 
   });
 
-  const [config, setConfig] = useState({
-    headerName: 'NEXUSHUB',
-    bannerTitle: 'BONUS NEW MEMBER 100%',
-    bannerSub: 'Berlaku untuk Semua Provider Slot',
-    bannerImage: '',
-    adminBanks: [] as any[] // Daftar bank admin dari DB
-  });
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [newPass, setNewPass] = useState("");
+  const [winRate, setWinRate] = useState(50);
 
-  const fetchSettings = async () => {
-    const { data } = await supabase.from('settings').select('*');
-    const { data: bankData } = await supabase.from('admin_banks').select('*');
-    if (data) {
-      const newConfig = { ...config, adminBanks: bankData || [] };
-      data.forEach(item => {
-        if (item.key === 'header_name') newConfig.headerName = item.value;
-        if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
-        if (item.key === 'banner_sub') newConfig.bannerSub = item.value;
-        if (item.key === 'banner_image') newConfig.bannerImage = item.value;
-      });
-      setConfig(newConfig);
-      if (bankData && bankData.length > 0) setFormData(prev => ({...prev, target_bank: `${bankData[0].bank_name} - ${bankData[0].account_number}`}));
-    }
+  const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', holder_name: '' });
+
+  const stats = {
+    totalPlayers: players.length,
+    totalBalance: players.reduce((acc, curr) => acc + (curr.balance || 0), 0),
+    totalDeposit: transactions.filter(t => t.type === 'DEPOSIT' && t.status === 'SUCCESS').reduce((acc, curr) => acc + (curr.amount || 0), 0),
+    totalWithdraw: transactions.filter(t => t.type === 'WITHDRAW' && t.status === 'SUCCESS').reduce((acc, curr) => acc + (curr.amount || 0), 0),
+    pendingTransactions: transactions.filter(t => t.status === 'PENDING').length
   };
 
-  const fetchUser = async (username: string) => {
-    const { data } = await supabase.from('players').select('*').eq('username', username).single();
-    if (data) setUser(data);
-  };
-
-  const fetchHistory = async (username: string) => {
-    const { data } = await supabase.from('transactions').select('*').eq('username', username).order('created_at', { ascending: false }).limit(10);
-    if (data) setHistory(data);
-  };
-
-  useEffect(() => {
-    fetchSettings();
-    const saved = localStorage.getItem('nexus_session');
-    if (saved) fetchUser(saved);
-
-    const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
-    const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
-
-    const settingsChannel = supabase.channel('realtime-settings')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchSettings())
-      .subscribe();
-
-    const clientChannel = supabase.channel('realtime-client')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload: any) => {
-        const currentSession = localStorage.getItem('nexus_session');
-        if (payload.new.username === currentSession) setUser(payload.new);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-        const currentSession = localStorage.getItem('nexus_session');
-        if (currentSession) fetchHistory(currentSession);
-      })
-      .subscribe();
-
-    return () => { 
-      clearInterval(pTimer); clearInterval(jTimer); 
-      supabase.removeChannel(settingsChannel); supabase.removeChannel(clientChannel);
-    };
+  const fetchData = useCallback(async () => {
+    const { data: pData } = await supabase.from('players').select('*').order('created_at', { ascending: false });
+    const { data: tData } = await supabase.from('transactions').select('*').order('created_at', { ascending: false });
+    const { data: bData } = await supabase.from('admin_banks').select('*');
+    if (pData) setPlayers(pData);
+    if (tData) setTransactions(tData);
+    if (bData) setAdminBanks(bData);
   }, []);
 
-  const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
-    setIsLoading(true);
-    if (type === 'REGISTER') {
-      if (!formData.account_number) { alert("Nomor Rekening wajib diisi!"); setIsLoading(false); return; }
-      const { error } = await supabase.from('players').insert([{ 
-        username: formData.username, 
-        password: formData.password, 
-        bank_name: formData.bank_name,
-        account_number: formData.account_number,
-        balance: 0, 
-        win_rate: 50 
-      }]);
-      if (error) alert("Username sudah terpakai!"); else alert("Berhasil! Silakan Login.");
-    } else {
-      const { data } = await supabase.from('players').select('*').eq('username', formData.username).eq('password', formData.password).single();
-      if (data) { 
-        setUser(data); 
-        localStorage.setItem('nexus_session', data.username); 
-        fetchHistory(data.username);
-        setActiveView('HOME'); 
-      } else alert("Login Gagal!");
+  const fetchSettings = useCallback(async () => {
+    const { data } = await supabase.from('settings').select('*');
+    if (data) {
+      const configObj = { ...sysConfig };
+      data.forEach(item => {
+        if (item.key === 'header_name') configObj.headerName = item.value;
+        if (item.key === 'banner_title') configObj.bannerTitle = item.value;
+        if (item.key === 'banner_sub') configObj.bannerSub = item.value;
+        if (item.key === 'accent_color') configObj.accentColor = item.value;
+        if (item.key === 'banner_image') configObj.bannerImage = item.value;
+      });
+      setSysConfig(configObj);
     }
-    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    fetchSettings();
+    const channel = supabase.channel('admin-db-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchData, fetchSettings]);
+
+  const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+      const file = event.target.files[0];
+      const fileName = `banner-${Date.now()}.${file.name.split('.').pop()}`;
+      const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
+      await supabase.from('settings').upsert({ key: 'banner_image', value: data.publicUrl }, { onConflict: 'key' });
+      setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
+      alert("Banner Berhasil Diupload!");
+    } catch (error: any) { alert("Gagal: " + error.message); } finally { setUploading(false); }
   };
 
-  const handleTransaction = async () => {
-    if (!user || !formData.amount || Number(formData.amount) < 25000) return alert("Minimal IDR 25,000!");
+  const updateAppVisual = async () => {
     setIsLoading(true);
-    const { error } = await supabase.from('transactions').insert([{ 
-      username: user.username, 
-      type: activeView, 
-      amount: Number(formData.amount), 
-      status: 'PENDING',
-      note: activeView === 'DEPOSIT' ? `Ke: ${formData.target_bank}` : `Dari: ${user.bank_name} (${user.account_number})`
-    }]);
+    const updates = [
+      { key: 'header_name', value: sysConfig.headerName },
+      { key: 'banner_title', value: sysConfig.bannerTitle },
+      { key: 'banner_sub', value: sysConfig.bannerSub },
+      { key: 'accent_color', value: sysConfig.accentColor }
+    ];
+    for (const item of updates) { await supabase.from('settings').upsert(item, { onConflict: 'key' }); }
     setIsLoading(false);
-    if (error) alert("Gagal: " + error.message);
-    else { alert(`Permintaan ${activeView} Dikirim!`); setFormData({ ...formData, amount: '' }); setActiveView('HOME'); }
+    alert("Visual Web Berhasil Diperbarui!");
   };
 
-  const openGame = (gameUrl: string) => {
-    if (!user) { setActiveView('LOGIN'); return; }
-    if (user.balance < 1000) { alert("Saldo anda tidak mencukupi!"); setActiveView('DEPOSIT'); return; }
+  const processTransaction = async (trx: any, status: 'SUCCESS' | 'REJECTED') => {
+    if (status === 'SUCCESS' && trx.status === 'PENDING') {
+      const player = players.find(p => p.username === trx.username);
+      if (player) {
+        let newBal = trx.type === 'DEPOSIT' ? player.balance + trx.amount : player.balance - trx.amount;
+        if (newBal < 0) return alert("Saldo tidak cukup!");
+        await supabase.from('players').update({ balance: newBal }).eq('username', trx.username);
+      }
+    }
+    await supabase.from('transactions').update({ status }).eq('id', trx.id);
+  };
+
+  const updatePlayerSettings = async () => {
+    if (!selectedUser) return alert("Pilih pemain dulu!");
     setIsLoading(true);
-    setTimeout(() => { setSelectedGameUrl(gameUrl); setIsLoading(false); }, 1500);
+    const updates: any = { win_rate: winRate };
+    if (newPass) updates.password = newPass;
+    const { error } = await supabase.from('players').update(updates).eq('username', selectedUser.username);
+    setIsLoading(false);
+    if (!error) { alert("Update Berhasil!"); setNewPass(""); setSelectedUser(null); }
   };
 
-  const filteredGames = activeTab === "ALL" ? GAMES : GAMES.filter(g => g.provider === activeTab);
+  const handleAddAdminBank = async () => {
+    if (!bankForm.bank_name || !bankForm.account_number) return alert("Isi data bank!");
+    const { error } = await supabase.from('admin_banks').insert([bankForm]);
+    if (!error) { alert("Bank Berhasil Ditambahkan!"); setBankForm({ bank_name: '', account_number: '', holder_name: '' }); fetchData(); }
+  };
+
+  const deleteAdminBank = async (id: any) => {
+    await supabase.from('admin_banks').delete().eq('id', id);
+    fetchData();
+  };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-32 overflow-x-hidden selection:bg-yellow-500">
-      
-      {/* RUNNING TEXT */}
-      <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest">
-        <div className="animate-marquee inline-block">SITUS RESMI {config.headerName} ● PROVIDER TERLENGKAP ● DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●</div>
-      </div>
-
-      {/* NAVBAR */}
-      <nav className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView('HOME')}>
-          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]">{config.headerName[0]}</div>
-          <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">
-            {config.headerName.includes('HUB') ? config.headerName.split('HUB')[0] : config.headerName}
-            <span className="text-yellow-500 not-italic">{config.headerName.includes('HUB') ? 'HUB' : ''}</span>
-          </h1>
+    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans">
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col p-8 hidden md:flex shadow-sm">
+        <div className="flex items-center gap-3 mb-12">
+          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center font-black text-white shadow-lg text-xl">N</div>
+          <h1 className="font-black text-slate-900 uppercase tracking-tighter text-xl">{sysConfig.headerName}</h1>
         </div>
-        
-        <div className="flex items-center gap-3">
-          {user ? (
-            <div className="flex items-center gap-2">
-              <button onClick={() => { setShowHistory(true); fetchHistory(user.username); }} className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400">🕒</button>
-              <div className="bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10 hidden md:block text-center shadow-inner">
-                <p className="text-[8px] text-slate-500 font-black uppercase">ID: {user.username}</p>
-                <p className="text-sm font-black text-emerald-400 font-mono italic tracking-tighter">IDR {user.balance.toLocaleString('id-ID')}</p>
-              </div>
-              <button onClick={() => { localStorage.removeItem('nexus_session'); setUser(null); }} className="bg-red-600/10 text-red-500 border border-red-600/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Logout</button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={() => setActiveView('LOGIN')} className="text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Masuk</button>
-              <button onClick={() => setActiveView('REGISTER')} className="bg-yellow-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase">Daftar</button>
-            </div>
-          )}
-        </div>
-      </nav>
+        <nav className="space-y-2 flex-1">
+          {['DASHBOARD', 'PEMAIN', 'TRANSAKSI', 'ADMIN BANK', 'SISTEM'].map((id: any) => (
+            <button key={id} onClick={() => setActiveTab(id)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === id ? 'bg-slate-900 text-white shadow-xl translate-x-2' : 'text-slate-400 hover:bg-slate-50'}`}>
+              {id === 'DASHBOARD' ? '📊' : id === 'PEMAIN' ? '👥' : id === 'TRANSAKSI' ? '💳' : id === 'ADMIN BANK' ? '🏦' : '🛠️'} {id}
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-      {/* TRANSACTION HISTORY */}
-      <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ease-in-out ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-8">
-               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Transaction History</h3>
-               <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white font-black">✕</button>
+      <main className="flex-1 p-8 md:p-12 overflow-y-auto">
+        <header className="mb-12"><h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2></header>
+
+        {activeTab === 'DASHBOARD' && (
+          <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Pemain</p><h3 className="text-3xl font-black">{stats.totalPlayers}</h3></div>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Saldo Player</p><h3 className="text-3xl font-black text-emerald-600">IDR {stats.totalBalance.toLocaleString()}</h3></div>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Deposit</p><h3 className="text-3xl font-black text-blue-600">IDR {stats.totalDeposit.toLocaleString()}</h3></div>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Withdraw</p><h3 className="text-3xl font-black text-orange-600">IDR {stats.totalWithdraw.toLocaleString()}</h3></div>
             </div>
-            <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar">
-               {history.map(trx => (
-                  <div key={trx.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 relative overflow-hidden">
-                    <div className={`absolute top-0 left-0 w-1 h-full ${trx.status === 'SUCCESS' ? 'bg-emerald-500' : trx.status === 'REJECTED' ? 'bg-red-500' : 'bg-yellow-600'}`}></div>
-                    <p className={`text-[10px] font-black uppercase ${trx.type === 'DEPOSIT' ? 'text-blue-400' : 'text-orange-400'}`}>{trx.type}</p>
-                    <p className="text-sm font-black text-white font-mono italic">IDR {trx.amount.toLocaleString()}</p>
-                    <p className="text-[8px] text-slate-500 uppercase font-bold">{new Date(trx.created_at).toLocaleString()}</p>
-                    {trx.note && <p className="text-[7px] text-slate-400 italic mt-1">{trx.note}</p>}
-                  </div>
-               ))}
+            <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex justify-between items-center">
+               <div><h4 className="text-2xl font-black uppercase italic">Antrian Transaksi</h4><p className="text-slate-400 text-xs mt-1">Terdapat {stats.pendingTransactions} permintaan tertunda</p></div>
+               <button onClick={() => setActiveTab('TRANSAKSI')} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px]">Cek Sekarang</button>
             </div>
           </div>
-      </div>
+        )}
 
-      {/* VIEW CONTROLLER */}
-      {activeView === 'LOGIN' || activeView === 'REGISTER' ? (
-        <div className="max-w-md mx-auto px-6 mt-12 animate-in fade-in zoom-in duration-300">
-           <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl text-center">
-              <h2 className="text-2xl font-black text-white italic uppercase mb-6 tracking-tighter">{activeView} AKUN</h2>
-              <div className="space-y-4">
-                 <input type="text" placeholder="Username" onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
-                 <input type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
-                 
-                 {activeView === 'REGISTER' && (
-                   <>
-                    <select value={formData.bank_name} onChange={(e) => setFormData({...formData, bank_name: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-white appearance-none text-center uppercase font-black text-xs">
-                      {BANK_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                    <input type="number" placeholder="Nomor Rekening / HP" onChange={(e) => setFormData({...formData, account_number: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
-                   </>
-                 )}
-
-                 <button onClick={() => handleAuth(activeView)} className="w-full bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-lg">Konfirmasi</button>
-                 <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 uppercase font-black block w-full mt-4">Kembali</button>
-              </div>
-           </div>
-        </div>
-      ) : activeView === 'DEPOSIT' || activeView === 'WITHDRAW' ? (
-        <div className="max-w-md mx-auto px-6 mt-8 animate-in slide-in-from-bottom-10 duration-500">
-           <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center">
-              <h2 className="text-2xl font-black text-white italic uppercase mb-4 tracking-tighter">{activeView} SALDO</h2>
-              
-              <div className="space-y-6">
-                 {activeView === 'DEPOSIT' && (
-                    <div className="text-left bg-black/40 p-4 rounded-2xl border border-white/5">
-                      <p className="text-[8px] font-black text-slate-500 uppercase mb-2">Tujuan Transfer:</p>
-                      <select 
-                        className="w-full bg-slate-800 text-white p-3 rounded-xl text-[10px] font-bold outline-none border border-white/10"
-                        onChange={(e) => setFormData({...formData, target_bank: e.target.value})}
-                      >
-                        {config.adminBanks.map((b: any) => (
-                          <option key={b.id} value={`${b.bank_name} - ${b.account_number}`}>
-                            {b.bank_name} : {b.account_number} (A/N {b.holder_name})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                 )}
-
-                 {activeView === 'WITHDRAW' && (
-                    <div className="text-left bg-black/40 p-4 rounded-2xl border border-white/5">
-                      <p className="text-[8px] font-black text-slate-500 uppercase">Rekening Tujuan Anda:</p>
-                      <p className="text-xs font-black text-yellow-500 mt-1 uppercase">{user?.bank_name} - {user?.account_number}</p>
-                    </div>
-                 )}
-
-                 <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
-                    <input type="number" placeholder="Min. 25.000" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
-                 </div>
-                 <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl">Kirim Permintaan</button>
-                 <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 font-black uppercase">Batal</button>
-              </div>
-           </div>
-        </div>
-      ) : (
-        <>
-          {/* BANNER PROMO */}
-          <div className="max-w-7xl mx-auto px-6 mt-6">
-            <div 
-              className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden transition-all duration-1000 shadow-2xl border border-white/10 bg-gradient-to-br ${PROMOS[currentPromo].color}`}
-              style={{
-                backgroundImage: config.bannerImage ? `linear-gradient(to bottom right, rgba(2, 6, 23, 0.8), rgba(2, 6, 23, 0.4)), url('${config.bannerImage}')` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
-              <div className="relative z-10 h-full flex flex-col justify-center">
-                <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase drop-shadow-lg">{config.bannerTitle}</h2>
-                <p className="text-sm text-white/70 mt-2 font-bold uppercase tracking-widest">{config.bannerSub}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* GLOBAL JACKPOT */}
-          <div className="max-w-7xl mx-auto px-6 mt-6">
-            <div className="bg-gradient-to-b from-slate-900 to-black rounded-3xl p-6 border border-yellow-500/20 text-center shadow-2xl">
-              <p className="text-yellow-500 font-black text-[9px] uppercase tracking-[0.5em] mb-2 opacity-70">Global Jackpot</p>
-              <h2 className="text-4xl md:text-6xl font-black text-white font-mono tracking-tighter italic">IDR {jackpot.toLocaleString('id-ID')}</h2>
-            </div>
-          </div>
-
-          {/* QUICK BUTTONS */}
-          <div className="max-w-7xl mx-auto px-6 mt-8 flex gap-3">
-             <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all">
-                <p className="text-xs font-black text-emerald-400 uppercase italic">Deposit</p>
-             </button>
-             <button onClick={() => user ? setActiveView('WITHDRAW') : setActiveView('LOGIN')} className="flex-1 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-3xl text-center group hover:bg-yellow-500/20 transition-all">
-                <p className="text-xs font-black text-yellow-500 uppercase italic">Withdraw</p>
-             </button>
-          </div>
-
-          {/* PROVIDER TABS */}
-          <div className="max-w-7xl mx-auto px-6 mt-10 overflow-x-auto no-scrollbar flex gap-2">
-            {PROVIDERS.map(p => (
-              <button key={p} onClick={() => setActiveTab(p)} className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase border ${activeTab === p ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-slate-900 text-slate-400 border-white/5'}`}>{p}</button>
-            ))}
-          </div>
-
-          {/* GAMES GRID */}
-          <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5 font-black uppercase pb-10">
-            {filteredGames.map((game) => (
-              <div key={game.id} onClick={() => openGame(game.demoUrl)} className="group cursor-pointer">
-                <div className="relative aspect-[3/4] rounded-[2.5rem] bg-slate-900 border border-white/5 overflow-hidden transition-all duration-500 group-hover:border-yellow-500/50 group-hover:-translate-y-2 shadow-xl shadow-black/50">
-                  <img 
-                    src={game.image} 
-                    alt={game.name} 
-                    onError={(e) => { (e.target as any).src = 'https://via.placeholder.com/300x400/020617/yellow?text=SLOT'; }}
-                    className="w-full h-full object-cover brightness-90 group-hover:brightness-110 group-hover:scale-110 transition-all duration-700" 
-                  />
-                  <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent">
-                    <p className="text-[9px] font-black text-emerald-400 text-center uppercase">RTP {game.rtp}%</p>
-                  </div>
+        {activeTab === 'SISTEM' && (
+          <div className="grid md:grid-cols-2 gap-10 animate-in fade-in">
+             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
+                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Visual & Identity</h4>
+                <div className="space-y-4">
+                   <label className="text-[9px] font-black text-slate-400 uppercase">App Name</label>
+                   <input type="text" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold uppercase" value={sysConfig.headerName} onChange={(e) => setSysConfig({...sysConfig, headerName: e.target.value.toUpperCase()})} />
+                   <label className="text-[9px] font-black text-slate-400 uppercase">Accent Color</label>
+                   <input type="color" className="h-14 w-full rounded-xl cursor-pointer" value={sysConfig.accentColor} onChange={(e) => setSysConfig({...sysConfig, accentColor: e.target.value})} />
                 </div>
-                <h4 className="mt-3 text-[10px] font-black text-center text-slate-400 uppercase truncate px-2 group-hover:text-yellow-500">{game.name}</h4>
-              </div>
-            ))}
+             </div>
+             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
+                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Promo Manager</h4>
+                <div className="space-y-4">
+                   <div className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center">
+                        {sysConfig.bannerImage ? <img src={sysConfig.bannerImage} className="w-full h-full object-cover" /> : <span className="text-[10px] font-black text-slate-400">NO IMAGE</span>}
+                   </div>
+                   <input type="file" accept="image/*" onChange={handleBannerUpload} className="text-[10px] font-black" />
+                   <input type="text" placeholder="Banner Title" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerTitle} onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} />
+                   <input type="text" placeholder="Banner Subtitle" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerSub} onChange={(e) => setSysConfig({...sysConfig, bannerSub: e.target.value})} />
+                   <button onClick={updateAppVisual} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px]">PUSH UPDATE</button>
+                </div>
+             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* GAME MODAL */}
-      {selectedGameUrl && (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-          <div className="h-12 bg-slate-950 flex justify-between items-center px-6 border-b border-white/10">
-            <p className="text-[10px] font-black text-yellow-500 uppercase italic">Winrate Engine: {user?.win_rate}% Active</p>
-            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-4 py-1 rounded text-[10px] font-black uppercase">Exit</button>
+        {activeTab === 'ADMIN BANK' && (
+            <div className="space-y-6 animate-in fade-in">
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
+                    <h4 className="text-[11px] font-black uppercase mb-6">Tambah Rekening Deposit Admin</h4>
+                    <div className="grid md:grid-cols-4 gap-4">
+                        <input type="text" placeholder="Bank" className="bg-slate-50 p-4 rounded-xl font-bold" value={bankForm.bank_name} onChange={e => setBankForm({...bankForm, bank_name: e.target.value})} />
+                        <input type="text" placeholder="Nomor Rekening" className="bg-slate-50 p-4 rounded-xl font-bold" value={bankForm.account_number} onChange={e => setBankForm({...bankForm, account_number: e.target.value})} />
+                        <input type="text" placeholder="Nama Pemilik" className="bg-slate-50 p-4 rounded-xl font-bold" value={bankForm.holder_name} onChange={e => setBankForm({...bankForm, holder_name: e.target.value})} />
+                        <button onClick={handleAddAdminBank} className="bg-slate-900 text-white rounded-xl font-black uppercase text-[10px]">Tambah</button>
+                    </div>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                    {adminBanks.map(b => (
+                        <div key={b.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
+                            <div><p className="font-black text-sm uppercase">{b.bank_name}</p><p className="text-xs font-bold text-slate-500">{b.account_number}</p></div>
+                            <button onClick={() => deleteAdminBank(b.id)} className="text-red-500 font-black">✕</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        {activeTab === 'PEMAIN' && (
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {players.map(p => (
+                   <div key={p.username} onClick={() => {setSelectedUser(p); setWinRate(p.win_rate)}} className={`p-6 rounded-3xl border transition-all cursor-pointer ${selectedUser?.username === p.username ? 'border-slate-900 bg-slate-50' : 'border-slate-100'}`}>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Username</p>
+                      <p className="font-black text-lg">{p.username}</p>
+                      <p className="text-[10px] font-bold text-blue-500 uppercase">{p.bank_name} - {p.account_number}</p>
+                      <div className="flex justify-between mt-4">
+                         <div><p className="text-[8px] font-black text-slate-400 uppercase">Balance</p><p className="font-mono font-bold text-emerald-600">IDR {p.balance.toLocaleString()}</p></div>
+                         <div className="text-right"><p className="text-[8px] font-black text-slate-400 uppercase">Win Rate</p><p className="font-mono font-bold text-blue-600">{p.win_rate}%</p></div>
+                      </div>
+                   </div>
+                ))}
+             </div>
+             {selectedUser && (
+                <div className="mt-10 p-8 bg-slate-900 rounded-[2.5rem] text-white animate-in slide-in-from-bottom-5">
+                   <h3 className="font-black italic uppercase text-xl mb-6">Edit: {selectedUser.username}</h3>
+                   <div className="grid md:grid-cols-3 gap-6">
+                      <div><label className="text-[9px] font-black uppercase text-slate-500">Ganti Password</label><input type="text" value={newPass} onChange={(e) => setNewPass(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none" placeholder="Password Baru" /></div>
+                      <div><label className="text-[9px] font-black uppercase text-slate-500">Win Rate (%)</label><input type="number" value={winRate} onChange={(e) => setWinRate(Number(e.target.value))} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none" /></div>
+                      <div className="flex items-end"><button onClick={updatePlayerSettings} className="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-[10px]">Simpan Perubahan</button></div>
+                   </div>
+                </div>
+             )}
           </div>
-          <iframe src={selectedGameUrl} className="flex-1 w-full border-none" allowFullScreen />
-        </div>
-      )}
+        )}
 
-      {/* LOADING OVERLAY */}
-      {isLoading && (
-        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
-          <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-[9px] font-black text-yellow-500 uppercase tracking-[0.5em] animate-pulse">Connecting Engine...</p>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { animation: marquee 30s linear infinite; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .animate-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-      `}</style>
+        {activeTab === 'TRANSAKSI' && (
+          <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
+             <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-100 uppercase font-black text-[9px]">
+                   <tr><th className="p-6">User / Info Bank</th><th className="p-6">Type</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
+                </thead>
+                <tbody>
+                   {transactions.map(trx => (
+                      <tr key={trx.id} className="border-b border-slate-50">
+                         <td className="p-6">
+                            <p className="font-black">{trx.username}</p>
+                            <p className="text-[9px] text-slate-400 italic">{trx.note}</p>
+                         </td>
+                         <td className="p-6"><span className={`px-3 py-1 rounded-full text-[9px] font-black ${trx.type === 'DEPOSIT' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>{trx.type}</span></td>
+                         <td className="p-6 font-mono font-bold tracking-tighter">IDR {trx.amount.toLocaleString()}</td>
+                         <td className="p-6"><span className={`text-[9px] font-black ${trx.status === 'SUCCESS' ? 'text-emerald-500' : trx.status === 'REJECTED' ? 'text-red-500' : 'text-yellow-600'}`}>{trx.status}</span></td>
+                         <td className="p-6 text-right">
+                            {trx.status === 'PENDING' && (
+                               <div className="flex justify-end gap-2">
+                                  <button onClick={() => processTransaction(trx, 'SUCCESS')} className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Approve</button>
+                                  <button onClick={() => processTransaction(trx, 'REJECTED')} className="bg-red-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Reject</button>
+                               </div>
+                            )}
+                         </td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
