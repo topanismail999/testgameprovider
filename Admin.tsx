@@ -20,6 +20,19 @@ export default function Admin() {
   const [newPass, setNewPass] = useState("");
   const [winRate, setWinRate] = useState(50);
 
+  // LOGIKA DASHBOARD (Statistik)
+  const stats = {
+    totalPlayers: players.length,
+    totalBalance: players.reduce((acc, curr) => acc + (curr.balance || 0), 0),
+    totalDeposit: transactions
+      .filter(t => t.type === 'DEPOSIT' && t.status === 'SUCCESS')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0),
+    totalWithdraw: transactions
+      .filter(t => t.type === 'WITHDRAW' && t.status === 'SUCCESS')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0),
+    pendingTransactions: transactions.filter(t => t.status === 'PENDING').length
+  };
+
   // Ambil Data Pemain & Transaksi
   const fetchData = useCallback(async () => {
     const { data: pData } = await supabase.from('players').select('*').order('created_at', { ascending: false });
@@ -68,17 +81,14 @@ export default function Admin() {
       const fileExt = file.name.split('.').pop();
       const fileName = `banner-${Date.now()}.${fileExt}`;
 
-      // 1. Upload ke Storage
       const { error: uploadError } = await supabase.storage
         .from('assets')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // 2. Dapatkan URL
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       
-      // 3. Simpan ke Tabel Settings (Penting: onConflict agar tidak duplikat/kosong)
       const { error: dbError } = await supabase.from('settings').upsert(
         { key: 'banner_image', value: data.publicUrl },
         { onConflict: 'key' }
@@ -112,19 +122,16 @@ export default function Admin() {
     alert("Visual Web Berhasil Diperbarui!");
   };
 
-  // Proses Transaksi & Update Saldo Player
+  // Proses Transaksi
   const processTransaction = async (trx: any, status: 'SUCCESS' | 'REJECTED') => {
     if (status === 'SUCCESS' && trx.status === 'PENDING') {
       const player = players.find(p => p.username === trx.username);
       if (player) {
         let newBal = trx.type === 'DEPOSIT' ? player.balance + trx.amount : player.balance - trx.amount;
         if (newBal < 0) return alert("Saldo tidak cukup!");
-        
-        // Update Saldo Player
         await supabase.from('players').update({ balance: newBal }).eq('username', trx.username);
       }
     }
-    // Update Status Transaksi
     await supabase.from('transactions').update({ status }).eq('id', trx.id);
   };
 
@@ -160,6 +167,38 @@ export default function Admin() {
         <header className="flex justify-between items-center mb-12">
            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2>
         </header>
+
+        {/* IMPLEMENTASI DASHBOARD */}
+        {activeTab === 'DASHBOARD' && (
+          <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Pemain</p>
+                <h3 className="text-3xl font-black text-slate-900">{stats.totalPlayers}</h3>
+              </div>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Saldo Player</p>
+                <h3 className="text-3xl font-black text-emerald-600">IDR {stats.totalBalance.toLocaleString()}</h3>
+              </div>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Deposit</p>
+                <h3 className="text-3xl font-black text-blue-600">IDR {stats.totalDeposit.toLocaleString()}</h3>
+              </div>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Withdraw</p>
+                <h3 className="text-3xl font-black text-orange-600">IDR {stats.totalWithdraw.toLocaleString()}</h3>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl flex justify-between items-center">
+               <div>
+                  <h4 className="text-2xl font-black uppercase italic tracking-tighter">Antrian Transaksi</h4>
+                  <p className="text-slate-400 text-xs font-bold uppercase mt-1">Terdapat {stats.pendingTransactions} permintaan yang butuh persetujuan</p>
+               </div>
+               <button onClick={() => setActiveTab('TRANSAKSI')} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-transform">Cek Sekarang</button>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'SISTEM' && (
           <div className="grid md:grid-cols-2 gap-10">
