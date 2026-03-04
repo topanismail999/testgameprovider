@@ -7,36 +7,36 @@ const PROVIDERS = [
   "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"
 ];
 
-// DAFTAR GAME DENGAN THUMBNAIL ASLI & DEMO URL
+// DAFTAR GAME DENGAN LINK GOOGLE DRIVE (DIRECT LINK)
 const GAMES = [
   // PRAGMATIC
-  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://wsrv.nl/?url=https://static.pragmaticplay.net/game_pic/square/200/vs20olympgate.png', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://wsrv.nl/?url=https://static.pragmaticplay.net/game_pic/square/200/vs20starlight.png', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1CBo5CmOLpgRE4DMomoMnH9xt3ceSkyB9', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
+  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1ka_74DGK4T2hCgotjWAYM6t_seA1KpmQ', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
   
   // PG SOFT
-  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://wsrv.nl/?url=https://img.pff.cloud/c_mp_p/126/1.png', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://wsrv.nl/?url=https://img.pff.cloud/c_mp_p/125/1.png', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
+  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1mU1Hjt1zX6ZdX9LR4KxKVkX0cJO3PQ4P', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
+  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1yX4r5AyxtAnMBXnrLn_FdUYSDw1wNAae', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
   
   // HABANERO
-  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://wsrv.nl/?url=https://images.habaneroslot.com/habanero/koigate.png', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
+  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://lh3.googleusercontent.com/d/1iqfb47e0jeaAPUSvHRnGsmkOrkFkkhtu', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
   
   // PLAY'N GO
-  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://wsrv.nl/?url=https://static.playngo.com/img/games/book-of-dead-square.jpg', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
+  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://lh3.googleusercontent.com/d/1oGBNf9yayXTaElyRvBpwb_XCT21Qnd3p', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
   
   // SPADEGAMING
-  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://wsrv.nl/?url=https://sg-static.spadegaming.com/game/brothers_kingdom/icon.png', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
+  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://lh3.googleusercontent.com/d/1QIXTkNy81kNkATDbLRNtJJS65hmN-0ph', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
   
   // CQ9
-  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://wsrv.nl/?url=https://web-static.cq9gaming.com/games/jump_high_2/icon.png', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
+  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://lh3.googleusercontent.com/d/1ynQaTvuJ18gWvmj3mwojSJ-mLg3n66uI', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
   
   // JOKER
-  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://wsrv.nl/?url=https://www.joker-gaming.net/images/games/roma.jpg', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
+  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://lh3.googleusercontent.com/d/1mER0QZ1NzBQQxeZrHxFlIKWAwZoo5wZe', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
   
   // BETSOFT
-  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://wsrv.nl/?url=https://static.betsoft.com/images/games/sugar-pop-2-double-dipped.jpg', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
+  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://lh3.googleusercontent.com/d/1B23sQQ7yetsivlxTz85bzsGQDQEVkOZd', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
   
   // NETENT
-  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://wsrv.nl/?url=https://static.netent.com/img/games/starburst.jpg', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
+  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://lh3.googleusercontent.com/d/1HDX2RGKSaH5KXN-RsfphvobeAN4laKCH', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
 ];
 
 const PROMOS = [
@@ -328,7 +328,12 @@ export default function App() {
                 <div className="relative aspect-[3/4] rounded-[2.5rem] bg-slate-900 border border-white/5 overflow-hidden transition-all duration-500 group-hover:border-yellow-500/50 group-hover:-translate-y-2 shadow-xl shadow-black/50">
                   
                   {/* GAME THUMBNAIL */}
-                  <img src={game.image} alt={game.name} className="w-full h-full object-cover brightness-90 group-hover:brightness-110 group-hover:scale-110 transition-all duration-700" />
+                  <img 
+                    src={game.image} 
+                    alt={game.name} 
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover brightness-90 group-hover:brightness-110 group-hover:scale-110 transition-all duration-700" 
+                  />
                   
                   {/* RTP OVERLAY */}
                   <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent border-t border-white/5">
