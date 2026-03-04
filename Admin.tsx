@@ -9,6 +9,10 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   
+  // Fitur Pencarian Baru
+  const [searchPlayer, setSearchPlayer] = useState("");
+  const [searchTrx, setSearchTrx] = useState("");
+  
   const [sysConfig, setSysConfig] = useState({
     headerName: "NEXUSHUB",
     accentColor: "#EAB308",
@@ -58,7 +62,6 @@ export default function Admin() {
     fetchData();
     fetchSettings();
 
-    // REAL-TIME ENGINE FOR ADMIN
     const adminChannel = supabase.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
@@ -69,7 +72,6 @@ export default function Admin() {
     return () => { supabase.removeChannel(adminChannel); };
   }, [fetchData, fetchSettings]);
 
-  // Handle Logic (Tetap Sama Seperti Sebelumnya)
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -129,6 +131,16 @@ export default function Admin() {
     await supabase.from('admin_banks').delete().eq('id', id);
   };
 
+  // Logic Filter
+  const filteredPlayers = players.filter(p => 
+    p.username.toLowerCase().includes(searchPlayer.toLowerCase()) || 
+    p.account_number.includes(searchPlayer)
+  );
+
+  const filteredTransactions = transactions.filter(t => 
+    t.username.toLowerCase().includes(searchTrx.toLowerCase())
+  );
+
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans">
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col p-8 hidden md:flex shadow-sm">
@@ -146,7 +158,36 @@ export default function Admin() {
       </aside>
 
       <main className="flex-1 p-8 md:p-12 overflow-y-auto">
-        <header className="mb-12"><h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2></header>
+        <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2>
+          
+          {/* Kolom Pencarian Dinamis Berdasarkan Tab */}
+          {activeTab === 'PEMAIN' && (
+            <div className="relative w-full md:w-80">
+              <input 
+                type="text" 
+                placeholder="Cari Username / Rekening..." 
+                className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-slate-900 transition-all shadow-sm"
+                value={searchPlayer}
+                onChange={(e) => setSearchPlayer(e.target.value)}
+              />
+              <span className="absolute right-4 top-4 opacity-30">🔍</span>
+            </div>
+          )}
+
+          {activeTab === 'TRANSAKSI' && (
+            <div className="relative w-full md:w-80">
+              <input 
+                type="text" 
+                placeholder="Cari Username Transaksi..." 
+                className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-slate-900 transition-all shadow-sm"
+                value={searchTrx}
+                onChange={(e) => setSearchTrx(e.target.value)}
+              />
+              <span className="absolute right-4 top-4 opacity-30">🔍</span>
+            </div>
+          )}
+        </header>
 
         {activeTab === 'DASHBOARD' && (
           <div className="space-y-10 animate-in fade-in duration-500">
@@ -214,7 +255,7 @@ export default function Admin() {
         {activeTab === 'PEMAIN' && (
           <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {players.map(p => (
+                {filteredPlayers.map(p => (
                    <div key={p.username} onClick={() => {setSelectedUser(p); setWinRate(p.win_rate)}} className={`p-6 rounded-3xl border transition-all cursor-pointer ${selectedUser?.username === p.username ? 'border-slate-900 bg-slate-50' : 'border-slate-100'}`}>
                       <p className="text-[10px] font-black uppercase text-slate-400">Username</p>
                       <p className="font-black text-lg">{p.username}</p>
@@ -246,7 +287,7 @@ export default function Admin() {
                     <tr><th className="p-6">User / Info Bank</th><th className="p-6">Type</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
                 </thead>
                 <tbody>
-                   {transactions.map(trx => (
+                   {filteredTransactions.map(trx => (
                       <tr key={trx.id} className="border-b border-slate-50">
                          <td className="p-6">
                             <p className="font-black">{trx.username}</p>
