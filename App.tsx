@@ -189,7 +189,7 @@ export default function App() {
       {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
         <span key={`a-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
       )) : <span className="ml-4">MEMPROSES TRANSAKSI... ●</span>}
-      <span className="ml-4 text-red-600">DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●</span>
+      <span className="ml-4 text-red-600">DEPOSIT QRIS OTOMATIS ● WD CEPAT ●</span>
     </div>
 
     {/* Bagian 2 (Duplikat Persis agar tidak ada layar kosong) */}
