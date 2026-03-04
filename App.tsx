@@ -34,9 +34,10 @@ export default function App() {
   const [adminBanks, setAdminBanks] = useState<any[]>([]);
 
   const [config, setConfig] = useState({
-    headerName: 'ELCYQQ',
+    headerName: 'NEXUSHUB',
     bannerTitle: 'BONUS NEW MEMBER 100%',
     bannerSub: 'Berlaku untuk Semua Provider Slot',
+    logoUrl: '',
     bannerImages: [] as string[]
   });
 
@@ -49,6 +50,7 @@ export default function App() {
         if (item.key === 'header_name') newConfig.headerName = item.value;
         if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
         if (item.key === 'banner_sub') newConfig.bannerSub = item.value;
+        if (item.key === 'logo_url') newConfig.logoUrl = item.value;
         if (item.key === 'banner_image_1') imgs[0] = item.value;
         if (item.key === 'banner_image_2') imgs[1] = item.value;
         if (item.key === 'banner_image_3') imgs[2] = item.value;
@@ -172,7 +174,13 @@ export default function App() {
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView('HOME')}>
-          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]">{config.headerName[0]}</div>
+          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(234,179,8,0.5)]">
+            {config.logoUrl ? (
+                <img src={config.logoUrl} className="w-full h-full object-cover" alt="Logo" />
+            ) : (
+                <span className="font-black text-black">{config.headerName[0]}</span>
+            )}
+          </div>
           <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">{config.headerName}</h1>
         </div>
         <div className="flex items-center gap-3">
@@ -205,7 +213,8 @@ export default function App() {
                   className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   style={{ backgroundImage: `url('${img}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                 >
-                  <div className="absolute bottom-8 left-8">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80" />
+                  <div className="absolute bottom-8 left-8 z-20">
                     <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase drop-shadow-2xl">{config.bannerTitle}</h2>
                     <p className="text-sm text-yellow-500 mt-2 font-bold uppercase tracking-widest">{config.bannerSub}</p>
                   </div>
@@ -217,7 +226,6 @@ export default function App() {
               </div>
             )}
             
-            {/* Slide Indicators */}
             <div className="absolute bottom-4 right-8 z-20 flex gap-2">
               {config.bannerImages.map((_, i) => (
                 <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-yellow-500' : 'w-2 bg-white/30'}`}></div>
@@ -227,7 +235,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Form views (Login/Register/Depo/WD) tetap sama sesuai struktur App.tsx awal Anda */}
+      {/* VIEW COMPONENTS */}
       {activeView === 'LOGIN' || activeView === 'REGISTER' ? (
         <div className="max-w-md mx-auto px-6 mt-12 animate-in fade-in zoom-in duration-300">
            <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl text-center">
@@ -271,7 +279,6 @@ export default function App() {
         </div>
       ) : (
         <>
-          {/* JACKPOT & GAMES */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div className="bg-gradient-to-b from-slate-900 to-black rounded-3xl p-6 border border-yellow-500/20 text-center shadow-2xl">
               <p className="text-yellow-500 font-black text-[9px] uppercase tracking-[0.5em] mb-2 opacity-70">Global Jackpot</p>
@@ -310,7 +317,7 @@ export default function App() {
         </>
       )}
 
-      {/* MODALS & HISTORY */}
+      {/* HISTORY MODAL */}
       <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-8">
