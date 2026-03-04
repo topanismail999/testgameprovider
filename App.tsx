@@ -38,6 +38,7 @@ export default function App() {
     bannerTitle: 'BONUS NEW MEMBER 100%',
     bannerSub: 'Berlaku untuk Semua Provider Slot',
     logoUrl: '',
+    qrisUrl: '',
     bannerImages: [] as string[]
   });
 
@@ -51,6 +52,7 @@ export default function App() {
         if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
         if (item.key === 'banner_sub') newConfig.bannerSub = item.value;
         if (item.key === 'logo_url') newConfig.logoUrl = item.value;
+        if (item.key === 'qris_url') newConfig.qrisUrl = item.value;
         if (item.key === 'banner_image_1') imgs[0] = item.value;
         if (item.key === 'banner_image_2') imgs[1] = item.value;
         if (item.key === 'banner_image_3') imgs[2] = item.value;
@@ -58,10 +60,11 @@ export default function App() {
       newConfig.bannerImages = imgs.filter(i => i !== "");
       setConfig(newConfig);
     }
-    const { data: banks } = await supabase.from('admin_banks').select('*');
+    const { data: banks } = await supabase.from('admin_banks').select('*').order('bank_name', { ascending: true });
     if (banks) {
       setAdminBanks(banks);
-      if (banks.length > 0) setFormData(prev => ({...prev, target_bank: `${banks[0].bank_name} - ${banks[0].account_number}`}));
+      const activeBanks = banks.filter(b => b.is_active);
+      if (activeBanks.length > 0) setFormData(prev => ({...prev, target_bank: `${activeBanks[0].bank_name} - ${activeBanks[0].account_number}`}));
     }
   };
 
@@ -112,7 +115,6 @@ export default function App() {
     };
   }, []);
 
-  // Slide Effect
   useEffect(() => {
     if (config.bannerImages.length > 1) {
       const timer = setInterval(() => {
@@ -158,7 +160,7 @@ export default function App() {
   const filteredGames = activeTab === "ALL" ? GAMES : GAMES.filter(g => g.provider === activeTab);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-32 overflow-x-hidden selection:bg-yellow-500">
+    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-40 overflow-x-hidden selection:bg-yellow-500">
       
       {/* RUNNING TEXT */}
       <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest">
@@ -174,19 +176,19 @@ export default function App() {
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView('HOME')}>
-          <div className="w-8 h-8 rounded flex items-center justify-center overflow-hidden">
-      {config.logoUrl ? (
-          <img src={config.logoUrl} className="w-full h-full object-contain" alt="Logo" />
-      ) : (
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border-2 border-white shadow-lg">
+            {config.logoUrl ? (
+                <img src={config.logoUrl} className="w-full h-full object-contain" alt="Logo" />
+            ) : (
                 <span className="font-black text-black">{config.headerName[0]}</span>
             )}
           </div>
           <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">{config.headerName}</h1>
-  </div>
+        </div>
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400">🕒</button>
+              <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors">🕒</button>
               <div className="bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10 hidden md:block text-center shadow-inner">
                 <p className="text-[8px] text-slate-500 font-black uppercase">ID: {user.username}</p>
                 <p className="text-sm font-black text-emerald-400 font-mono italic tracking-tighter">IDR {user.balance.toLocaleString('id-ID')}</p>
@@ -262,11 +264,29 @@ export default function App() {
               <h2 className="text-2xl font-black text-white italic uppercase mb-8 tracking-tighter">{activeView} SALDO</h2>
               <div className="space-y-6 text-left">
                  {activeView === 'DEPOSIT' && (
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Pilih Bank Tujuan Deposit:</label>
-                        <select onChange={(e) => setFormData({...formData, target_bank: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-yellow-500 font-bold">
-                            {adminBanks.map(b => <option key={b.id} value={`${b.bank_name} - ${b.account_number}`}>{b.bank_name} ({b.account_number}) A/N {b.holder_name}</option>)}
-                        </select>
+                    <div className="space-y-4">
+                        {config.qrisUrl && (
+                            <div className="bg-white p-4 rounded-3xl flex flex-col items-center gap-2 shadow-xl border-4 border-yellow-500">
+                                <p className="text-[9px] font-black text-slate-900 uppercase">Scan QRIS Untuk Deposit Cepat</p>
+                                <img src={config.qrisUrl} alt="QRIS" className="w-full h-auto rounded-lg" />
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                                    <p className="text-[8px] font-black text-slate-500 uppercase">Proses Otomatis 24 Jam</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Pilih Bank Tujuan Deposit:</label>
+                            <select onChange={(e) => setFormData({...formData, target_bank: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-yellow-500 font-bold">
+                                {adminBanks.filter(b => b.is_active).map(b => (
+                                    <option key={b.id} value={`${b.bank_name} - ${b.account_number}`}>
+                                        {b.bank_name} ({b.account_number}) A/N {b.holder_name}
+                                    </option>
+                                ))}
+                                {adminBanks.filter(b => b.is_active).length === 0 && <option>Semua Bank Offline</option>}
+                            </select>
+                        </div>
                     </div>
                  )}
                  <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
@@ -316,6 +336,37 @@ export default function App() {
           </div>
         </>
       )}
+
+      {/* FOOTER BANK STATUS */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#020617]/95 backdrop-blur-2xl border-t border-white/10 z-50 py-4 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap justify-center gap-3">
+            {adminBanks.map(b => (
+              <div key={b.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                <div className="relative w-8 h-5 bg-white rounded border border-white flex items-center justify-center p-0.5 overflow-hidden">
+                   <span className="text-[7px] font-black text-black leading-none">{b.bank_name}</span>
+                   <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-slate-900 ${b.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                </div>
+                <span className={`text-[8px] font-black uppercase ${b.is_active ? 'text-emerald-400' : 'text-red-500'}`}>
+                  {b.is_active ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            ))}
+            {config.qrisUrl && (
+              <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                <div className="relative w-8 h-5 bg-white rounded border border-white flex items-center justify-center p-0.5 overflow-hidden text-[7px] font-black text-black">
+                   QRIS
+                   <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-slate-900 bg-emerald-500 animate-pulse"></div>
+                </div>
+                <span className="text-[8px] font-black uppercase text-emerald-400">Online</span>
+              </div>
+            )}
+          </div>
+          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">
+            &copy; 2026 {config.headerName} - Trusted Entertainment Platform
+          </p>
+        </div>
+      </footer>
 
       {/* HISTORY MODAL */}
       <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
