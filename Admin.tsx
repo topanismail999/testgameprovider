@@ -9,6 +9,7 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingQris, setUploadingQris] = useState(false);
   
   const [searchPlayer, setSearchPlayer] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
@@ -19,6 +20,7 @@ export default function Admin() {
     bannerTitle: "",
     bannerSub: "",
     logoUrl: "",
+    qrisUrl: "",
     bannerImages: ["", "", ""]
   });
 
@@ -38,7 +40,7 @@ export default function Admin() {
   const fetchData = useCallback(async () => {
     const { data: pData } = await supabase.from('players').select('*').order('created_at', { ascending: false });
     const { data: tData } = await supabase.from('transactions').select('*').order('created_at', { ascending: false });
-    const { data: bData } = await supabase.from('admin_banks').select('*');
+    const { data: bData } = await supabase.from('admin_banks').select('*').order('bank_name', { ascending: true });
     if (pData) setPlayers(pData);
     if (tData) setTransactions(tData);
     if (bData) setAdminBanks(bData);
@@ -54,6 +56,7 @@ export default function Admin() {
         if (item.key === 'banner_sub') configObj.bannerSub = item.value;
         if (item.key === 'accent_color') configObj.accentColor = item.value;
         if (item.key === 'logo_url') configObj.logoUrl = item.value;
+        if (item.key === 'qris_url') configObj.qrisUrl = item.value;
         if (item.key === 'banner_image_1') configObj.bannerImages[0] = item.value;
         if (item.key === 'banner_image_2') configObj.bannerImages[1] = item.value;
         if (item.key === 'banner_image_3') configObj.bannerImages[2] = item.value;
@@ -76,22 +79,38 @@ export default function Admin() {
     return () => { supabase.removeChannel(adminChannel); };
   }, [fetchData, fetchSettings]);
 
+  const toggleBankStatus = async (id: string, currentStatus: boolean) => {
+    await supabase.from('admin_banks').update({ is_active: !currentStatus }).eq('id', id);
+  };
+
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploadingLogo(true);
       if (!event.target.files || event.target.files.length === 0) return;
       const file = event.target.files[0];
       const fileName = `logo-${Date.now()}.${file.name.split('.').pop()}`;
-      
       const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
       if (uploadError) throw uploadError;
-      
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       await supabase.from('settings').upsert({ key: 'logo_url', value: data.publicUrl }, { onConflict: 'key' });
-      
       setSysConfig(prev => ({ ...prev, logoUrl: data.publicUrl }));
       alert("Logo Berhasil Diperbarui!");
     } catch (error: any) { alert("Gagal Upload Logo: " + error.message); } finally { setUploadingLogo(false); }
+  };
+
+  const handleQrisUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingQris(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+      const file = event.target.files[0];
+      const fileName = `qris-${Date.now()}.${file.name.split('.').pop()}`;
+      const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
+      await supabase.from('settings').upsert({ key: 'qris_url', value: data.publicUrl }, { onConflict: 'key' });
+      setSysConfig(prev => ({ ...prev, qrisUrl: data.publicUrl }));
+      alert("QRIS Berhasil Diperbarui!");
+    } catch (error: any) { alert("Gagal Upload QRIS: " + error.message); } finally { setUploadingQris(false); }
   };
 
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
@@ -103,10 +122,8 @@ export default function Admin() {
       const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
-      
       const key = `banner_image_${index + 1}`;
       await supabase.from('settings').upsert({ key, value: data.publicUrl }, { onConflict: 'key' });
-      
       const newImages = [...sysConfig.bannerImages];
       newImages[index] = data.publicUrl;
       setSysConfig(prev => ({ ...prev, bannerImages: newImages }));
@@ -154,7 +171,7 @@ export default function Admin() {
 
   const handleAddAdminBank = async () => {
     if (!bankForm.bank_name || !bankForm.account_number) return alert("Isi data bank!");
-    const { error } = await supabase.from('admin_banks').insert([bankForm]);
+    const { error } = await supabase.from('admin_banks').insert([{ ...bankForm, is_active: true }]);
     if (!error) { alert("Bank Berhasil Ditambahkan!"); setBankForm({ bank_name: '', account_number: '', holder_name: '' }); }
   };
 
@@ -226,7 +243,6 @@ export default function Admin() {
              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
                 <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Identity & Banner Manager</h4>
                 
-                {/* LOGO UPLOAD SECTION */}
                 <div className="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200 mb-8">
                     <label className="text-[10px] font-black uppercase text-slate-400 block mb-4">Official Logo (Recommended 512x512 PNG)</label>
                     <div className="flex items-center gap-6">
@@ -272,19 +288,50 @@ export default function Admin() {
         {activeTab === 'ADMIN BANK' && (
             <div className="space-y-6 animate-in fade-in">
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
+                    <h4 className="text-[11px] font-black uppercase mb-6">Pengaturan Pembayaran QRIS</h4>
+                    <div className="flex flex-col md:flex-row gap-8 items-center">
+                        <div className="w-48 h-48 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative">
+                            {sysConfig.qrisUrl ? <img src={sysConfig.qrisUrl} className="w-full h-full object-contain" alt="QRIS" /> : <span className="text-[10px] font-black text-slate-400">QRIS BELUM ADA</span>}
+                            {uploadingQris && <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-[10px] font-black animate-pulse">UPLOADING...</div>}
+                        </div>
+                        <div className="flex-1 space-y-4">
+                            <p className="text-xs text-slate-500 font-bold uppercase italic leading-relaxed">
+                                Upload gambar QRIS toko Anda di sini. Gambar ini akan muncul secara otomatis di panel deposit pemain.
+                            </p>
+                            <input type="file" accept="image/*" onChange={handleQrisUpload} className="text-[10px] font-black block w-full" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
                     <h4 className="text-[11px] font-black uppercase mb-6">Tambah Rekening Deposit Admin</h4>
                     <div className="grid md:grid-cols-4 gap-4">
-                        <input type="text" placeholder="Bank" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.bank_name} onChange={e => setBankForm({...bankForm, bank_name: e.target.value})} />
+                        <input type="text" placeholder="Bank Name (Contoh: BCA / DANA)" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.bank_name} onChange={e => setBankForm({...bankForm, bank_name: e.target.value})} />
                         <input type="text" placeholder="Nomor Rekening" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.account_number} onChange={e => setBankForm({...bankForm, account_number: e.target.value})} />
                         <input type="text" placeholder="Nama Pemilik" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.holder_name} onChange={e => setBankForm({...bankForm, holder_name: e.target.value})} />
                         <button onClick={handleAddAdminBank} className="bg-slate-900 text-white rounded-xl font-black uppercase text-[10px]">Tambah</button>
                     </div>
                 </div>
-                <div className="grid md:grid-cols-3 gap-4">
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {adminBanks.map(b => (
-                        <div key={b.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
-                            <div><p className="font-black text-sm uppercase">{b.bank_name}</p><p className="text-xs font-bold text-slate-500">{b.account_number}</p></div>
-                            <button onClick={() => deleteAdminBank(b.id)} className="text-red-500 font-black">✕</button>
+                        <div key={b.id} className="bg-white p-6 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-3 h-3 rounded-full ${b.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                <div>
+                                    <p className="font-black text-sm uppercase">{b.bank_name}</p>
+                                    <p className="text-[10px] font-bold text-slate-400">{b.account_number}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => toggleBankStatus(b.id, b.is_active)}
+                                    className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase ${b.is_active ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}
+                                >
+                                    {b.is_active ? 'Matikan' : 'Aktifkan'}
+                                </button>
+                                <button onClick={() => deleteAdminBank(b.id)} className="text-slate-300 hover:text-red-500 transition-colors">✕</button>
+                            </div>
                         </div>
                     ))}
                 </div>
