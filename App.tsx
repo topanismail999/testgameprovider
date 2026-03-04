@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
-// DAFTAR PROVIDER LENGKAP
+// DAFTAR PROVIDER LENGKAP (Tetap Sesuai Kodemu)
 const PROVIDERS = [
   "ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "PLAY'N GO", 
   "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"
 ];
 
-// DAFTAR GAME
+// DAFTAR GAME LENGKAP (Tetap Sesuai Kodemu)
 const GAMES = [
-  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1CBo5CmOLpgRE4DMomoMnH9xt3ceSkyB9', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1ka_74DGK4T2hCgotjWAYM6t_seA1KpmQ', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
-  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1mU1Hjt1zX6ZdX9LR4KxKVkX0cJO3PQ4P', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1yX4r5AyxtAnMBXnrLn_FdUYSDw1wNAae', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
-  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://lh3.googleusercontent.com/d/1iqfb47e0jeaAPUSvHRnGsmkOrkFkkhtu', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
-  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://lh3.googleusercontent.com/d/1oGBNf9yayXTaElyRvBpwb_XCT21Qnd3p', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
-  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://lh3.googleusercontent.com/d/1QIXTkNy81kNkATDbLRNtJJS65hmN-0ph', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
-  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://lh3.googleusercontent.com/d/1ynQaTvuJ18gWvmj3mwojSJ-mLg3n66uI', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
-  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://lh3.googleusercontent.com/d/1mER0QZ1NzBQQxeZrHxFlIKWAwZoo5wZe', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
-  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://lh3.googleusercontent.com/d/1B23sQQ7yetsivlxTz85bzsGQDQEVkOZd', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
-  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://lh3.googleusercontent.com/d/1HDX2RGKSaH5KXN-RsfphvobeAN4laKCH', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
+  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://img.imageboss.me/smob/width/400/dpr/2/assets/images/games/vs20olympgate.jpg', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
+  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://img.imageboss.me/smob/width/400/dpr/2/assets/images/games/vs20starlight.jpg', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://m.pgsoft-games.com/126/images/common/logo.png', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
+  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://m.pgsoft-games.com/125/images/common/logo.png', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
+  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://hanabero.com/koi-gate.jpg', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
+  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://www.playngo.com/images/games/book-of-dead-share.jpg', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
+  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://img.imageboss.me/smob/width/400/dpr/2/assets/images/games/brothers_kingdom.jpg', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
+  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://img.imageboss.me/smob/width/400/dpr/2/assets/images/games/jump_high_2.jpg', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
+  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://www.jokerapp666.com/images/games/roma.jpg', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
+  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://betsoft.com/images/games/sugar-pop-2.jpg', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
+  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://games.netent.com/video-slots/starburst/img/starburst.jpg', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
 ];
 
 const PROMOS = [
@@ -43,61 +43,66 @@ export default function App() {
     headerName: 'NEXUSHUB',
     bannerTitle: 'BONUS NEW MEMBER 100%',
     bannerSub: 'Berlaku untuk Semua Provider Slot',
-    bannerImage: '' // Menampung URL gambar dari Admin
+    bannerImage: '' 
   });
 
-  const openGame = (gameUrl: string) => {
-    if (!user) { setActiveView('LOGIN'); return; }
-    if (user.balance < 1000) { alert("Saldo anda tidak mencukupi!"); setActiveView('DEPOSIT'); return; }
-    setIsLoading(true);
-    setTimeout(() => { setSelectedGameUrl(gameUrl); setIsLoading(false); }, 1500);
+  // FUNGSI FETCH SETTINGS (Visual Web)
+  const fetchSettings = async () => {
+    const { data } = await supabase.from('settings').select('*');
+    if (data) {
+      const newConfig = { ...config };
+      data.forEach(item => {
+        if (item.key === 'header_name') newConfig.headerName = item.value;
+        if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
+        if (item.key === 'banner_sub') newConfig.bannerSub = item.value;
+        if (item.key === 'banner_image') newConfig.bannerImage = item.value;
+      });
+      setConfig(newConfig);
+    }
+  };
+
+  // FUNGSI FETCH USER DATA (Update Saldo)
+  const fetchUser = async (username: string) => {
+    const { data } = await supabase.from('players').select('*').eq('username', username).single();
+    if (data) setUser(data);
+  };
+
+  // FUNGSI FETCH RIWAYAT
+  const fetchHistory = async (username: string) => {
+    const { data } = await supabase.from('transactions').select('*').eq('username', username).order('created_at', { ascending: false }).limit(10);
+    if (data) setHistory(data);
   };
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      const { data } = await supabase.from('settings').select('*');
-      if (data) {
-        const newConfig = { ...config };
-        data.forEach(item => {
-          if (item.key === 'header_name') newConfig.headerName = item.value;
-          if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
-          if (item.key === 'banner_sub') newConfig.bannerSub = item.value;
-          if (item.key === 'banner_image') newConfig.bannerImage = item.value; // Implementasi baru
-        });
-        setConfig(newConfig);
-      }
-    };
     fetchSettings();
+    const saved = localStorage.getItem('nexus_session');
+    if (saved) fetchUser(saved);
 
+    const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
+    const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
+
+    // REAL-TIME: SETTINGS (Visual Web)
     const settingsChannel = supabase.channel('realtime-settings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
       .subscribe();
 
-    const checkSession = async () => {
-      const saved = localStorage.getItem('nexus_session');
-      if (saved) {
-        const { data } = await supabase.from('players').select('*').eq('username', saved).single();
-        if (data) setUser(data);
-      }
-    };
-    checkSession();
-
-    const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
-    const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
-    
+    // REAL-TIME: PEMAIN & TRANSAKSI (Saldo Otomatis)
     const clientChannel = supabase.channel('realtime-client')
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
-        table: 'players',
-        filter: user ? `username=eq.${user.username}` : undefined 
-      }, (payload: any) => setUser(payload.new))
+        table: 'players'
+      }, (payload: any) => {
+        const currentSession = localStorage.getItem('nexus_session');
+        if (payload.new.username === currentSession) {
+          setUser(payload.new);
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-        if (user) fetchHistory(user.username);
+        const currentSession = localStorage.getItem('nexus_session');
+        if (currentSession) fetchHistory(currentSession);
       })
       .subscribe();
-
-    if (user) fetchHistory(user.username);
 
     return () => { 
       clearInterval(pTimer); 
@@ -105,23 +110,19 @@ export default function App() {
       supabase.removeChannel(settingsChannel); 
       supabase.removeChannel(clientChannel);
     };
-  }, [user?.username]);
-
-  const fetchHistory = async (username: string) => {
-    const { data } = await supabase.from('transactions').select('*').eq('username', username).order('created_at', { ascending: false }).limit(10);
-    if (data) setHistory(data);
-  };
+  }, []);
 
   const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
     setIsLoading(true);
     if (type === 'REGISTER') {
       const { error } = await supabase.from('players').insert([{ username: formData.username, password: formData.password, balance: 0, win_rate: 50 }]);
-      if (error) alert("Gagal Daftar!"); else alert("Berhasil! Silakan Login.");
+      if (error) alert("Username sudah ada!"); else alert("Berhasil! Silakan Login.");
     } else {
       const { data } = await supabase.from('players').select('*').eq('username', formData.username).eq('password', formData.password).single();
       if (data) { 
         setUser(data); 
         localStorage.setItem('nexus_session', data.username); 
+        fetchHistory(data.username);
         setActiveView('HOME'); 
       } else alert("Login Gagal!");
     }
@@ -135,6 +136,13 @@ export default function App() {
     setIsLoading(false);
     if (error) alert("Gagal: " + error.message);
     else { alert(`Permintaan ${activeView} Berhasil!`); setFormData({ ...formData, amount: '' }); setActiveView('HOME'); }
+  };
+
+  const openGame = (gameUrl: string) => {
+    if (!user) { setActiveView('LOGIN'); return; }
+    if (user.balance < 1000) { alert("Saldo anda tidak mencukupi!"); setActiveView('DEPOSIT'); return; }
+    setIsLoading(true);
+    setTimeout(() => { setSelectedGameUrl(gameUrl); setIsLoading(false); }, 1500);
   };
 
   const filteredGames = activeTab === "ALL" ? GAMES : GAMES.filter(g => g.provider === activeTab);
@@ -160,7 +168,7 @@ export default function App() {
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400">🕒</button>
+              <button onClick={() => { setShowHistory(true); fetchHistory(user.username); }} className="w-10 h-10 bg-slate-900/80 border border-white/10 rounded-xl flex items-center justify-center text-slate-400">🕒</button>
               <div className="bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10 hidden md:block text-center shadow-inner">
                 <p className="text-[8px] text-slate-500 font-black uppercase">ID: {user.username}</p>
                 <p className="text-sm font-black text-emerald-400 font-mono italic tracking-tighter">IDR {user.balance.toLocaleString('id-ID')}</p>
@@ -192,6 +200,7 @@ export default function App() {
                     <p className="text-[8px] text-slate-500 uppercase font-bold">{new Date(trx.created_at).toLocaleString()}</p>
                   </div>
                ))}
+               {history.length === 0 && <p className="text-center text-[10px] text-slate-500 uppercase font-black py-10">Belum ada riwayat</p>}
             </div>
           </div>
       </div>
@@ -224,7 +233,7 @@ export default function App() {
         </div>
       ) : (
         <>
-          {/* BANNER PROMO DENGAN IMPLEMENTASI UPLOAD GAMBAR */}
+          {/* BANNER PROMO */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div 
               className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden transition-all duration-1000 shadow-2xl border border-white/10 bg-gradient-to-br ${PROMOS[currentPromo].color}`}
@@ -250,7 +259,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* DEPOSIT / WD QUICK BUTTONS */}
+          {/* QUICK BUTTONS */}
           <div className="max-w-7xl mx-auto px-6 mt-8 flex gap-3">
              <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all">
                 <p className="text-xs font-black text-emerald-400 uppercase italic transition-transform group-hover:scale-110">Deposit</p>
@@ -260,7 +269,7 @@ export default function App() {
              </button>
           </div>
 
-          {/* PROVIDER FILTER TABS */}
+          {/* PROVIDER FILTER */}
           <div className="max-w-7xl mx-auto px-6 mt-10 overflow-x-auto no-scrollbar flex gap-2">
             {PROVIDERS.map(p => (
               <button key={p} onClick={() => setActiveTab(p)} className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase whitespace-nowrap transition-all border ${activeTab === p ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg scale-105' : 'bg-slate-900 text-slate-400 border-white/5'}`}>{p}</button>
