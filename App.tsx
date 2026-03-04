@@ -450,7 +450,7 @@ export default function App() {
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { animation: marquee 60s linear infinite; }
+        .animate-marquee { animation: marquee 5s linear infinite; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .animate-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
