@@ -13,7 +13,7 @@ export default function Admin() {
     accentColor: "#EAB308",
     bannerTitle: "BONUS NEW MEMBER 100%",
     bannerSub: "Berlaku untuk Semua Provider Slot",
-    bannerImage: "" // Field baru untuk URL Gambar
+    bannerImage: "" 
   });
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -40,13 +40,13 @@ export default function Admin() {
       });
       setSysConfig(configObj);
     }
-  }, [sysConfig]);
+  }, []);
 
   useEffect(() => {
     fetchData();
     fetchSettings();
     
-    const channel = supabase.channel('db-changes')
+    const channel = supabase.channel('admin-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
@@ -55,7 +55,6 @@ export default function Admin() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData, fetchSettings]);
 
-  // FUNGSI BARU: Upload Banner ke Storage
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -65,23 +64,26 @@ export default function Admin() {
       const fileExt = file.name.split('.').pop();
       const fileName = `banner-${Date.now()}.${fileExt}`;
 
-      // 1. Upload ke Bucket 'assets'
       const { error: uploadError } = await supabase.storage
         .from('assets')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // 2. Ambil Public URL
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       
-      // 3. Update State & Database
-      setSysConfig({ ...sysConfig, bannerImage: data.publicUrl });
-      await supabase.from('settings').upsert({ key: 'banner_image', value: data.publicUrl });
+      // Update DB Langsung dengan onConflict key
+      const { error: dbError } = await supabase.from('settings').upsert(
+        { key: 'banner_image', value: data.publicUrl },
+        { onConflict: 'key' }
+      );
+
+      if (dbError) throw dbError;
       
-      alert("Banner berhasil diupload!");
+      setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
+      alert("Banner Berhasil Diperbarui!");
     } catch (error: any) {
-      alert("Gagal upload: " + error.message);
+      alert("Error: " + error.message);
     } finally {
       setUploading(false);
     }
@@ -93,33 +95,23 @@ export default function Admin() {
       { key: 'header_name', value: sysConfig.headerName },
       { key: 'banner_title', value: sysConfig.bannerTitle },
       { key: 'banner_sub', value: sysConfig.bannerSub },
-      { key: 'accent_color', value: sysConfig.accentColor },
-      { key: 'banner_image', value: sysConfig.bannerImage }
+      { key: 'accent_color', value: sysConfig.accentColor }
     ];
 
     for (const item of updates) {
-      await supabase.from('settings').upsert({ key: item.key, value: item.value });
+      await supabase.from('settings').upsert(item, { onConflict: 'key' });
     }
     setIsLoading(false);
-    alert("Visual Web Berhasil Diperbarui!");
-  };
-
-  const updatePlayerSettings = async () => {
-    if (!selectedUser) return alert("Pilih pemain dulu!");
-    setIsLoading(true);
-    const updates: any = { win_rate: winRate };
-    if (newPass) updates.password = newPass;
-    const { error } = await supabase.from('players').update(updates).eq('username', selectedUser.username);
-    setIsLoading(false);
-    if (!error) { alert("Update Berhasil!"); setNewPass(""); }
+    alert("Konfigurasi Sistem Diperbarui!");
   };
 
   const processTransaction = async (trx: any, status: 'SUCCESS' | 'REJECTED') => {
-    if (status === 'SUCCESS') {
+    if (status === 'SUCCESS' && trx.status === 'PENDING') {
       const player = players.find(p => p.username === trx.username);
       if (player) {
         let newBal = trx.type === 'DEPOSIT' ? player.balance + trx.amount : player.balance - trx.amount;
         if (newBal < 0) return alert("Saldo tidak cukup!");
+        
         await supabase.from('players').update({ balance: newBal }).eq('username', trx.username);
       }
     }
@@ -128,7 +120,6 @@ export default function Admin() {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans">
-      {/* SIDEBAR */}
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col p-8 hidden md:flex shadow-sm">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center font-black text-white shadow-lg text-xl">N</div>
@@ -138,18 +129,13 @@ export default function Admin() {
         </div>
         <nav className="space-y-2 flex-1">
           {['DASHBOARD', 'PEMAIN', 'TRANSAKSI', 'GAME', 'SISTEM'].map((id: any) => (
-            <button 
-              key={id} 
-              onClick={() => setActiveTab(id)}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === id ? 'bg-slate-900 text-white shadow-xl translate-x-2' : 'text-slate-400 hover:bg-slate-50'}`}
-            >
+            <button key={id} onClick={() => setActiveTab(id)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === id ? 'bg-slate-900 text-white shadow-xl translate-x-2' : 'text-slate-400 hover:bg-slate-50'}`}>
               {id === 'DASHBOARD' ? '📊' : id === 'PEMAIN' ? '👥' : id === 'TRANSAKSI' ? '💳' : id === 'GAME' ? '🎰' : '🛠️'} {id}
             </button>
           ))}
         </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 p-8 md:p-12 overflow-y-auto">
         <header className="flex justify-between items-center mb-12">
            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2>
@@ -157,7 +143,6 @@ export default function Admin() {
 
         {activeTab === 'SISTEM' && (
           <div className="grid md:grid-cols-2 gap-10">
-             {/* Visual Settings */}
              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
                 <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Visual & Identity</h4>
                 <div className="space-y-4">
@@ -168,7 +153,6 @@ export default function Admin() {
                 </div>
              </div>
 
-             {/* Promo Manager (WITH UPLOAD) */}
              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
                 <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Promo Manager</h4>
                 <div className="space-y-4">
@@ -178,20 +162,12 @@ export default function Admin() {
                          {sysConfig.bannerImage ? (
                             <img src={sysConfig.bannerImage} className="w-full h-full object-cover" alt="Banner Preview" />
                          ) : (
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">No Image Uploaded</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">No Image</span>
                          )}
                       </div>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleBannerUpload}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        disabled={uploading}
-                      />
+                      <input type="file" accept="image/*" onChange={handleBannerUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={uploading} />
                       {uploading && <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-[10px] font-black">UPLOADING...</div>}
                    </div>
-                   <p className="text-[8px] text-slate-400 italic font-bold uppercase">Klik gambar di atas untuk mengganti banner</p>
-
                    <input type="text" placeholder="Banner Title" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerTitle} onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} />
                    <input type="text" placeholder="Banner Subtitle" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerSub} onChange={(e) => setSysConfig({...sysConfig, bannerSub: e.target.value})} />
                    <button onClick={updateAppVisual} disabled={isLoading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">PUSH UPDATE</button>
@@ -200,10 +176,42 @@ export default function Admin() {
           </div>
         )}
 
-        {/* --- Bagian Tab PEMAIN & TRANSAKSI tetap sama seperti kodemu sebelumnya --- */}
-        {activeTab === 'PEMAIN' && (
-           /* ... Kode Tab Pemain Kamu ... */
-           <div className="text-sm font-bold">Pilih Tab User Control untuk mengelola pemain. (Gunakan kodemu yang lama di sini)</div>
+        {activeTab === 'TRANSAKSI' && (
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="p-6 text-[10px] font-black uppercase">User</th>
+                  <th className="p-6 text-[10px] font-black uppercase">Type</th>
+                  <th className="p-6 text-[10px] font-black uppercase">Amount</th>
+                  <th className="p-6 text-[10px] font-black uppercase">Status</th>
+                  <th className="p-6 text-[10px] font-black uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map(trx => (
+                  <tr key={trx.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <td className="p-6 font-bold">{trx.username}</td>
+                    <td className="p-6">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black ${trx.type === 'DEPOSIT' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>{trx.type}</span>
+                    </td>
+                    <td className="p-6 font-mono font-bold">IDR {trx.amount.toLocaleString()}</td>
+                    <td className="p-6">
+                      <span className={`text-[9px] font-black ${trx.status === 'SUCCESS' ? 'text-emerald-500' : trx.status === 'REJECTED' ? 'text-red-500' : 'text-yellow-600 animate-pulse'}`}>{trx.status}</span>
+                    </td>
+                    <td className="p-6 flex gap-2">
+                      {trx.status === 'PENDING' && (
+                        <>
+                          <button onClick={() => processTransaction(trx, 'SUCCESS')} className="p-2 bg-emerald-500 text-white rounded-lg text-[10px] font-bold">APPROVE</button>
+                          <button onClick={() => processTransaction(trx, 'REJECTED')} className="p-2 bg-red-500 text-white rounded-lg text-[10px] font-bold">REJECT</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </main>
     </div>
