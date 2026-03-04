@@ -20,6 +20,7 @@ export default function Admin() {
   const [newPass, setNewPass] = useState("");
   const [winRate, setWinRate] = useState(50);
 
+  // Ambil Data Pemain & Transaksi
   const fetchData = useCallback(async () => {
     const { data: pData } = await supabase.from('players').select('*').order('created_at', { ascending: false });
     const { data: tData } = await supabase.from('transactions').select('*').order('created_at', { ascending: false });
@@ -27,6 +28,7 @@ export default function Admin() {
     if (tData) setTransactions(tData);
   }, []);
 
+  // Ambil Pengaturan Visual
   const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
@@ -46,7 +48,8 @@ export default function Admin() {
     fetchData();
     fetchSettings();
     
-    const channel = supabase.channel('admin-sync')
+    // Listener Real-time untuk Admin
+    const channel = supabase.channel('admin-db-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
@@ -55,6 +58,7 @@ export default function Admin() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData, fetchSettings]);
 
+  // Handle Upload Banner
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -64,15 +68,17 @@ export default function Admin() {
       const fileExt = file.name.split('.').pop();
       const fileName = `banner-${Date.now()}.${fileExt}`;
 
+      // 1. Upload ke Storage
       const { error: uploadError } = await supabase.storage
         .from('assets')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
+      // 2. Dapatkan URL
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       
-      // Update DB Langsung dengan onConflict key
+      // 3. Simpan ke Tabel Settings (Penting: onConflict agar tidak duplikat/kosong)
       const { error: dbError } = await supabase.from('settings').upsert(
         { key: 'banner_image', value: data.publicUrl },
         { onConflict: 'key' }
@@ -81,14 +87,15 @@ export default function Admin() {
       if (dbError) throw dbError;
       
       setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
-      alert("Banner Berhasil Diperbarui!");
+      alert("Banner Berhasil Diupload & Disinkronkan!");
     } catch (error: any) {
-      alert("Error: " + error.message);
+      alert("Gagal: " + error.message);
     } finally {
       setUploading(false);
     }
   };
 
+  // Update Teks & Warna
   const updateAppVisual = async () => {
     setIsLoading(true);
     const updates = [
@@ -102,9 +109,10 @@ export default function Admin() {
       await supabase.from('settings').upsert(item, { onConflict: 'key' });
     }
     setIsLoading(false);
-    alert("Konfigurasi Sistem Diperbarui!");
+    alert("Visual Web Berhasil Diperbarui!");
   };
 
+  // Proses Transaksi & Update Saldo Player
   const processTransaction = async (trx: any, status: 'SUCCESS' | 'REJECTED') => {
     if (status === 'SUCCESS' && trx.status === 'PENDING') {
       const player = players.find(p => p.username === trx.username);
@@ -112,10 +120,22 @@ export default function Admin() {
         let newBal = trx.type === 'DEPOSIT' ? player.balance + trx.amount : player.balance - trx.amount;
         if (newBal < 0) return alert("Saldo tidak cukup!");
         
+        // Update Saldo Player
         await supabase.from('players').update({ balance: newBal }).eq('username', trx.username);
       }
     }
+    // Update Status Transaksi
     await supabase.from('transactions').update({ status }).eq('id', trx.id);
+  };
+
+  const updatePlayerSettings = async () => {
+    if (!selectedUser) return alert("Pilih pemain dulu!");
+    setIsLoading(true);
+    const updates: any = { win_rate: winRate };
+    if (newPass) updates.password = newPass;
+    const { error } = await supabase.from('players').update(updates).eq('username', selectedUser.username);
+    setIsLoading(false);
+    if (!error) { alert("Update Berhasil!"); setNewPass(""); setSelectedUser(null); }
   };
 
   return (
@@ -162,7 +182,7 @@ export default function Admin() {
                          {sysConfig.bannerImage ? (
                             <img src={sysConfig.bannerImage} className="w-full h-full object-cover" alt="Banner Preview" />
                          ) : (
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">No Image</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">No Image Uploaded</span>
                          )}
                       </div>
                       <input type="file" accept="image/*" onChange={handleBannerUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={uploading} />
@@ -176,41 +196,82 @@ export default function Admin() {
           </div>
         )}
 
+        {activeTab === 'PEMAIN' && (
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {players.map(p => (
+                   <div key={p.username} onClick={() => {setSelectedUser(p); setWinRate(p.win_rate)}} className={`p-6 rounded-3xl border transition-all cursor-pointer ${selectedUser?.username === p.username ? 'border-slate-900 bg-slate-50' : 'border-slate-100'}`}>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Username</p>
+                      <p className="font-black text-lg">{p.username}</p>
+                      <div className="flex justify-between mt-4">
+                         <div>
+                            <p className="text-[8px] font-black uppercase text-slate-400">Balance</p>
+                            <p className="font-mono font-bold text-emerald-600">IDR {p.balance.toLocaleString()}</p>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-[8px] font-black uppercase text-slate-400">Win Rate</p>
+                            <p className="font-mono font-bold text-blue-600">{p.win_rate}%</p>
+                         </div>
+                      </div>
+                   </div>
+                ))}
+             </div>
+             {selectedUser && (
+                <div className="mt-10 p-8 bg-slate-900 rounded-[2.5rem] text-white animate-in slide-in-from-bottom-5">
+                   <h3 className="font-black italic uppercase text-xl mb-6">Edit Pemain: {selectedUser.username}</h3>
+                   <div className="grid md:grid-cols-3 gap-6">
+                      <div>
+                         <label className="text-[9px] font-black uppercase text-slate-500">Ganti Password</label>
+                         <input type="text" value={newPass} onChange={(e) => setNewPass(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none" placeholder="Isi jika ingin ganti" />
+                      </div>
+                      <div>
+                         <label className="text-[9px] font-black uppercase text-slate-500">Win Rate (%)</label>
+                         <input type="number" value={winRate} onChange={(e) => setWinRate(Number(e.target.value))} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none" />
+                      </div>
+                      <div className="flex items-end">
+                         <button onClick={updatePlayerSettings} className="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-[10px]">Simpan Perubahan</button>
+                      </div>
+                   </div>
+                </div>
+             )}
+          </div>
+        )}
+
         {activeTab === 'TRANSAKSI' && (
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="p-6 text-[10px] font-black uppercase">User</th>
-                  <th className="p-6 text-[10px] font-black uppercase">Type</th>
-                  <th className="p-6 text-[10px] font-black uppercase">Amount</th>
-                  <th className="p-6 text-[10px] font-black uppercase">Status</th>
-                  <th className="p-6 text-[10px] font-black uppercase">Action</th>
+             <table className="w-full text-left">
+                <thead>
+                   <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="p-6 text-[10px] font-black uppercase">User</th>
+                      <th className="p-6 text-[10px] font-black uppercase">Type</th>
+                      <th className="p-6 text-[10px] font-black uppercase">Amount</th>
+                      <th className="p-6 text-[10px] font-black uppercase">Status</th>
+                      <th className="p-6 text-[10px] font-black uppercase text-right">Action</th>
                 </tr>
-              </thead>
-              <tbody>
-                {transactions.map(trx => (
-                  <tr key={trx.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td className="p-6 font-bold">{trx.username}</td>
-                    <td className="p-6">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black ${trx.type === 'DEPOSIT' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>{trx.type}</span>
-                    </td>
-                    <td className="p-6 font-mono font-bold">IDR {trx.amount.toLocaleString()}</td>
-                    <td className="p-6">
-                      <span className={`text-[9px] font-black ${trx.status === 'SUCCESS' ? 'text-emerald-500' : trx.status === 'REJECTED' ? 'text-red-500' : 'text-yellow-600 animate-pulse'}`}>{trx.status}</span>
-                    </td>
-                    <td className="p-6 flex gap-2">
-                      {trx.status === 'PENDING' && (
-                        <>
-                          <button onClick={() => processTransaction(trx, 'SUCCESS')} className="p-2 bg-emerald-500 text-white rounded-lg text-[10px] font-bold">APPROVE</button>
-                          <button onClick={() => processTransaction(trx, 'REJECTED')} className="p-2 bg-red-500 text-white rounded-lg text-[10px] font-bold">REJECT</button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                   {transactions.map(trx => (
+                      <tr key={trx.id} className="border-b border-slate-50">
+                         <td className="p-6 font-bold">{trx.username}</td>
+                         <td className="p-6">
+                            <span className={`px-3 py-1 rounded-full text-[9px] font-black ${trx.type === 'DEPOSIT' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>{trx.type}</span>
+                         </td>
+                         <td className="p-6 font-mono font-bold tracking-tighter">IDR {trx.amount.toLocaleString()}</td>
+                         <td className="p-6">
+                            <span className={`text-[9px] font-black ${trx.status === 'SUCCESS' ? 'text-emerald-500' : trx.status === 'REJECTED' ? 'text-red-500' : 'text-yellow-600'}`}>{trx.status}</span>
+                         </td>
+                         <td className="p-6 text-right">
+                            {trx.status === 'PENDING' && (
+                               <div className="flex justify-end gap-2">
+                                  <button onClick={() => processTransaction(trx, 'SUCCESS')} className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Approve</button>
+                                  <button onClick={() => processTransaction(trx, 'REJECTED')} className="bg-red-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Reject</button>
+                               </div>
+                            )}
+                         </td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
           </div>
         )}
       </main>
