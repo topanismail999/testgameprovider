@@ -9,15 +9,15 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   
-  // Fitur Pencarian
   const [searchPlayer, setSearchPlayer] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
   
+  // State Sistem diperbaiki agar tidak mudah crash saat input
   const [sysConfig, setSysConfig] = useState({
-    headerName: "NEXUSHUB",
+    headerName: "",
     accentColor: "#EAB308",
-    bannerTitle: "BONUS NEW MEMBER 100%",
-    bannerSub: "Berlaku untuk Semua Provider Slot",
+    bannerTitle: "",
+    bannerSub: "",
     bannerImage: "" 
   });
 
@@ -46,7 +46,7 @@ export default function Admin() {
   const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
-      const configObj = { ...sysConfig };
+      const configObj: any = {};
       data.forEach(item => {
         if (item.key === 'header_name') configObj.headerName = item.value;
         if (item.key === 'banner_title') configObj.bannerTitle = item.value;
@@ -54,9 +54,10 @@ export default function Admin() {
         if (item.key === 'accent_color') configObj.accentColor = item.value;
         if (item.key === 'banner_image') configObj.bannerImage = item.value;
       });
-      setSysConfig(configObj);
+      // Gunakan functional update untuk mencegah infinite loop
+      setSysConfig(prev => ({ ...prev, ...configObj }));
     }
-  }, [sysConfig]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -66,7 +67,9 @@ export default function Admin() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, () => {
+         // Hanya fetch jika bukan dari input kita sendiri
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(adminChannel); };
@@ -82,21 +85,29 @@ export default function Admin() {
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       await supabase.from('settings').upsert({ key: 'banner_image', value: data.publicUrl }, { onConflict: 'key' });
+      setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
       alert("Banner Berhasil Diupload!");
     } catch (error: any) { alert("Gagal: " + error.message); } finally { setUploading(false); }
   };
 
   const updateAppVisual = async () => {
     setIsLoading(true);
-    const updates = [
-      { key: 'header_name', value: sysConfig.headerName },
-      { key: 'banner_title', value: sysConfig.bannerTitle },
-      { key: 'banner_sub', value: sysConfig.bannerSub },
-      { key: 'accent_color', value: sysConfig.accentColor }
-    ];
-    for (const item of updates) { await supabase.from('settings').upsert(item, { onConflict: 'key' }); }
-    setIsLoading(false);
-    alert("Visual Web Berhasil Diperbarui!");
+    try {
+      const updates = [
+        { key: 'header_name', value: sysConfig.headerName },
+        { key: 'banner_title', value: sysConfig.bannerTitle },
+        { key: 'banner_sub', value: sysConfig.bannerSub },
+        { key: 'accent_color', value: sysConfig.accentColor }
+      ];
+      for (const item of updates) { 
+        await supabase.from('settings').upsert(item, { onConflict: 'key' }); 
+      }
+      alert("Visual Web Berhasil Diperbarui!");
+    } catch (e: any) {
+      alert("Gagal update: " + e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const processTransaction = async (trx: any, status: 'SUCCESS' | 'REJECTED') => {
@@ -131,7 +142,6 @@ export default function Admin() {
     await supabase.from('admin_banks').delete().eq('id', id);
   };
 
-  // Logic Filter Perbaikan Bug Blank Putih
   const filteredPlayers = (players || []).filter(p => 
     (p.username?.toLowerCase() || "").includes(searchPlayer.toLowerCase()) || 
     (p.account_number?.toString() || "").includes(searchPlayer)
@@ -146,7 +156,7 @@ export default function Admin() {
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col p-8 hidden md:flex shadow-sm">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center font-black text-white shadow-lg text-xl">N</div>
-          <h1 className="font-black text-slate-900 uppercase tracking-tighter text-xl">{sysConfig.headerName}</h1>
+          <h1 className="font-black text-slate-900 uppercase tracking-tighter text-xl">{sysConfig.headerName || "NEXUSHUB"}</h1>
         </div>
         <nav className="space-y-2 flex-1">
           {['DASHBOARD', 'PEMAIN', 'TRANSAKSI', 'ADMIN BANK', 'SISTEM'].map((id: any) => (
@@ -161,27 +171,14 @@ export default function Admin() {
         <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2>
           
-          {activeTab === 'PEMAIN' && (
+          {(activeTab === 'PEMAIN' || activeTab === 'TRANSAKSI') && (
             <div className="relative w-full md:w-80">
               <input 
                 type="text" 
-                placeholder="Cari Username / Rekening..." 
-                className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-slate-900 transition-all shadow-sm"
-                value={searchPlayer}
-                onChange={(e) => setSearchPlayer(e.target.value)}
-              />
-              <span className="absolute right-4 top-4 opacity-30">🔍</span>
-            </div>
-          )}
-
-          {activeTab === 'TRANSAKSI' && (
-            <div className="relative w-full md:w-80">
-              <input 
-                type="text" 
-                placeholder="Cari Username Transaksi..." 
-                className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-slate-900 transition-all shadow-sm"
-                value={searchTrx}
-                onChange={(e) => setSearchTrx(e.target.value)}
+                placeholder={`Cari di ${activeTab}...`}
+                className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-slate-900 shadow-sm"
+                value={activeTab === 'PEMAIN' ? searchPlayer : searchTrx}
+                onChange={(e) => activeTab === 'PEMAIN' ? setSearchPlayer(e.target.value) : setSearchTrx(e.target.value)}
               />
               <span className="absolute right-4 top-4 opacity-30">🔍</span>
             </div>
@@ -209,34 +206,64 @@ export default function Admin() {
                 <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Visual & Identity</h4>
                 <div className="space-y-4">
                    <label className="text-[9px] font-black text-slate-400 uppercase">App Name</label>
-                   <input type="text" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold uppercase" value={sysConfig.headerName} onChange={(e) => setSysConfig({...sysConfig, headerName: e.target.value.toUpperCase()})} />
+                   <input 
+                      type="text" 
+                      className="w-full bg-slate-50 border p-4 rounded-2xl font-bold uppercase outline-none focus:ring-2 ring-slate-200" 
+                      value={sysConfig.headerName} 
+                      onChange={(e) => setSysConfig({...sysConfig, headerName: e.target.value})} 
+                   />
                    <label className="text-[9px] font-black text-slate-400 uppercase">Accent Color</label>
-                   <input type="color" className="h-14 w-full rounded-xl cursor-pointer" value={sysConfig.accentColor} onChange={(e) => setSysConfig({...sysConfig, accentColor: e.target.value})} />
+                   <input 
+                      type="color" 
+                      className="h-14 w-full rounded-xl cursor-pointer" 
+                      value={sysConfig.accentColor} 
+                      onChange={(e) => setSysConfig({...sysConfig, accentColor: e.target.value})} 
+                   />
                 </div>
              </div>
              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
                 <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Promo Manager</h4>
                 <div className="space-y-4">
-                   <div className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center">
+                   <div className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center relative">
                         {sysConfig.bannerImage ? <img src={sysConfig.bannerImage} className="w-full h-full object-cover" alt="Banner" /> : <span className="text-[10px] font-black text-slate-400">NO IMAGE</span>}
+                        {uploading && <div className="absolute inset-0 bg-white/50 flex items-center justify-center text-[10px] font-black uppercase">Uploading...</div>}
                    </div>
                    <input type="file" accept="image/*" onChange={handleBannerUpload} className="text-[10px] font-black" />
-                   <input type="text" placeholder="Banner Title" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerTitle} onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} />
-                   <input type="text" placeholder="Banner Subtitle" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold" value={sysConfig.bannerSub} onChange={(e) => setSysConfig({...sysConfig, bannerSub: e.target.value})} />
-                   <button onClick={updateAppVisual} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px]">PUSH UPDATE</button>
+                   <input 
+                      type="text" 
+                      placeholder="Banner Title" 
+                      className="w-full bg-slate-50 border p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-slate-200" 
+                      value={sysConfig.bannerTitle} 
+                      onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} 
+                   />
+                   <input 
+                      type="text" 
+                      placeholder="Banner Subtitle" 
+                      className="w-full bg-slate-50 border p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-slate-200" 
+                      value={sysConfig.bannerSub} 
+                      onChange={(e) => setSysConfig({...sysConfig, bannerSub: e.target.value})} 
+                   />
+                   <button 
+                      onClick={updateAppVisual} 
+                      disabled={isLoading}
+                      className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-black transition-all disabled:opacity-50"
+                   >
+                     {isLoading ? "UPDATING..." : "PUSH UPDATE"}
+                   </button>
                 </div>
              </div>
           </div>
         )}
 
+        {/* Tab Lainnya Tetap Sama */}
         {activeTab === 'ADMIN BANK' && (
             <div className="space-y-6 animate-in fade-in">
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
                     <h4 className="text-[11px] font-black uppercase mb-6">Tambah Rekening Deposit Admin</h4>
                     <div className="grid md:grid-cols-4 gap-4">
-                        <input type="text" placeholder="Bank" className="bg-slate-50 p-4 rounded-xl font-bold" value={bankForm.bank_name} onChange={e => setBankForm({...bankForm, bank_name: e.target.value})} />
-                        <input type="text" placeholder="Nomor Rekening" className="bg-slate-50 p-4 rounded-xl font-bold" value={bankForm.account_number} onChange={e => setBankForm({...bankForm, account_number: e.target.value})} />
-                        <input type="text" placeholder="Nama Pemilik" className="bg-slate-50 p-4 rounded-xl font-bold" value={bankForm.holder_name} onChange={e => setBankForm({...bankForm, holder_name: e.target.value})} />
+                        <input type="text" placeholder="Bank" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.bank_name} onChange={e => setBankForm({...bankForm, bank_name: e.target.value})} />
+                        <input type="text" placeholder="Nomor Rekening" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.account_number} onChange={e => setBankForm({...bankForm, account_number: e.target.value})} />
+                        <input type="text" placeholder="Nama Pemilik" className="bg-slate-50 p-4 rounded-xl font-bold outline-none" value={bankForm.holder_name} onChange={e => setBankForm({...bankForm, holder_name: e.target.value})} />
                         <button onClick={handleAddAdminBank} className="bg-slate-900 text-white rounded-xl font-black uppercase text-[10px]">Tambah</button>
                     </div>
                 </div>
@@ -255,7 +282,7 @@ export default function Admin() {
           <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredPlayers.map(p => (
-                   <div key={p.username} onClick={() => {setSelectedUser(p); setWinRate(p.win_rate)}} className={`p-6 rounded-3xl border transition-all cursor-pointer ${selectedUser?.username === p.username ? 'border-slate-900 bg-slate-50' : 'border-slate-100'}`}>
+                   <div key={p.username} onClick={() => {setSelectedUser(p); setWinRate(p.win_rate)}} className={`p-6 rounded-3xl border transition-all cursor-pointer ${selectedUser?.username === p.username ? 'border-slate-900 bg-slate-50' : 'border-slate-100 hover:bg-slate-50'}`}>
                       <p className="text-[10px] font-black uppercase text-slate-400">Username</p>
                       <p className="font-black text-lg">{p.username}</p>
                       <p className="text-[10px] font-bold text-blue-500 uppercase">{p.bank_name} - {p.account_number}</p>
@@ -270,9 +297,9 @@ export default function Admin() {
                 <div className="mt-10 p-8 bg-slate-900 rounded-[2.5rem] text-white animate-in slide-in-from-bottom-5">
                    <h3 className="font-black italic uppercase text-xl mb-6">Edit: {selectedUser.username}</h3>
                    <div className="grid md:grid-cols-3 gap-6">
-                      <div><label className="text-[9px] font-black uppercase text-slate-500">Ganti Password</label><input type="text" value={newPass} onChange={(e) => setNewPass(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none" placeholder="Password Baru" /></div>
-                      <div><label className="text-[9px] font-black uppercase text-slate-500">Win Rate (%)</label><input type="number" value={winRate} onChange={(e) => setWinRate(Number(e.target.value))} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none" /></div>
-                      <div className="flex items-end"><button onClick={updatePlayerSettings} className="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-[10px]">Simpan Perubahan</button></div>
+                      <div><label className="text-[9px] font-black uppercase text-slate-500">Ganti Password</label><input type="text" value={newPass} onChange={(e) => setNewPass(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none border border-white/10" placeholder="Password Baru" /></div>
+                      <div><label className="text-[9px] font-black uppercase text-slate-500">Win Rate (%)</label><input type="number" value={winRate} onChange={(e) => setWinRate(Number(e.target.value))} className="w-full bg-white/10 p-4 rounded-xl mt-2 outline-none border border-white/10" /></div>
+                      <div className="flex items-end"><button onClick={updatePlayerSettings} className="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-[10px] hover:bg-yellow-400">Simpan Perubahan</button></div>
                    </div>
                 </div>
              )}
@@ -287,7 +314,7 @@ export default function Admin() {
                 </thead>
                 <tbody>
                    {filteredTransactions.map(trx => (
-                      <tr key={trx.id} className="border-b border-slate-50">
+                      <tr key={trx.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                          <td className="p-6">
                             <p className="font-black">{trx.username}</p>
                             <p className="text-[9px] text-slate-400 italic">{trx.note}</p>
@@ -298,8 +325,8 @@ export default function Admin() {
                          <td className="p-6 text-right">
                             {trx.status === 'PENDING' && (
                                <div className="flex justify-end gap-2">
-                                  <button onClick={() => processTransaction(trx, 'SUCCESS')} className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Approve</button>
-                                  <button onClick={() => processTransaction(trx, 'REJECTED')} className="bg-red-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Reject</button>
+                                  <button onClick={() => processTransaction(trx, 'SUCCESS')} className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase hover:bg-emerald-600 transition-all">Approve</button>
+                                  <button onClick={() => processTransaction(trx, 'REJECTED')} className="bg-red-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase hover:bg-red-600 transition-all">Reject</button>
                                </div>
                             )}
                          </td>
