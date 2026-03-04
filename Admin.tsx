@@ -20,7 +20,6 @@ export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [newPass, setNewPass] = useState("");
   const [winRate, setWinRate] = useState(50);
-
   const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', holder_name: '' });
 
   const stats = {
@@ -53,20 +52,24 @@ export default function Admin() {
       });
       setSysConfig(configObj);
     }
-  }, []);
+  }, [sysConfig]);
 
   useEffect(() => {
     fetchData();
     fetchSettings();
-    const channel = supabase.channel('admin-db-sync')
+
+    // REAL-TIME ENGINE FOR ADMIN
+    const adminChannel = supabase.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    return () => { supabase.removeChannel(adminChannel); };
   }, [fetchData, fetchSettings]);
 
+  // Handle Logic (Tetap Sama Seperti Sebelumnya)
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -77,7 +80,6 @@ export default function Admin() {
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       await supabase.from('settings').upsert({ key: 'banner_image', value: data.publicUrl }, { onConflict: 'key' });
-      setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
       alert("Banner Berhasil Diupload!");
     } catch (error: any) { alert("Gagal: " + error.message); } finally { setUploading(false); }
   };
@@ -120,12 +122,11 @@ export default function Admin() {
   const handleAddAdminBank = async () => {
     if (!bankForm.bank_name || !bankForm.account_number) return alert("Isi data bank!");
     const { error } = await supabase.from('admin_banks').insert([bankForm]);
-    if (!error) { alert("Bank Berhasil Ditambahkan!"); setBankForm({ bank_name: '', account_number: '', holder_name: '' }); fetchData(); }
+    if (!error) { alert("Bank Berhasil Ditambahkan!"); setBankForm({ bank_name: '', account_number: '', holder_name: '' }); }
   };
 
   const deleteAdminBank = async (id: any) => {
     await supabase.from('admin_banks').delete().eq('id', id);
-    fetchData();
   };
 
   return (
@@ -156,8 +157,8 @@ export default function Admin() {
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Withdraw</p><h3 className="text-3xl font-black text-orange-600">IDR {stats.totalWithdraw.toLocaleString()}</h3></div>
             </div>
             <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex justify-between items-center">
-               <div><h4 className="text-2xl font-black uppercase italic">Antrian Transaksi</h4><p className="text-slate-400 text-xs mt-1">Terdapat {stats.pendingTransactions} permintaan tertunda</p></div>
-               <button onClick={() => setActiveTab('TRANSAKSI')} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px]">Cek Sekarang</button>
+                <div><h4 className="text-2xl font-black uppercase italic">Antrian Transaksi</h4><p className="text-slate-400 text-xs mt-1">Terdapat {stats.pendingTransactions} permintaan tertunda</p></div>
+                <button onClick={() => setActiveTab('TRANSAKSI')} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px]">Cek Sekarang</button>
             </div>
           </div>
         )}
@@ -242,7 +243,7 @@ export default function Admin() {
           <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
              <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100 uppercase font-black text-[9px]">
-                   <tr><th className="p-6">User / Info Bank</th><th className="p-6">Type</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
+                    <tr><th className="p-6">User / Info Bank</th><th className="p-6">Type</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
                 </thead>
                 <tbody>
                    {transactions.map(trx => (
