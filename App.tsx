@@ -179,26 +179,26 @@ export default function App() {
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-40 overflow-x-hidden selection:bg-yellow-500">
       
       {/* RUNNING TEXT */}
-<div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest flex">
-  {/* Wrapper untuk animasi yang meluncur ke kiri */}
+<div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest flex relative">
+  {/* Gunakan Flex agar teks menyambung rata */}
   <div className="flex animate-marquee whitespace-nowrap">
     
-    {/* Konten Pertama */}
-    <div className="inline-block">
-      SITUS RESMI {config.headerName} ● SETORAN TERAKHIR: 
+    {/* Bagian 1 */}
+    <div className="flex items-center">
+      <span className="mx-4">SITUS RESMI {config.headerName} ● SETORAN TERAKHIR:</span>
       {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
-        <span key={`first-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
-      )) : " MEMPROSES TRANSAKSI... ● "}
-      DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●
+        <span key={`a-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
+      )) : <span className="ml-4">MEMPROSES TRANSAKSI... ●</span>}
+      <span className="ml-4 text-red-600">DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●</span>
     </div>
 
-    {/* Konten Kedua (Duplikat Identik untuk menyambung) */}
-    <div className="inline-block">
-      SITUS RESMI {config.headerName} ● SETORAN TERAKHIR: 
+    {/* Bagian 2 (Duplikat Persis agar tidak ada layar kosong) */}
+    <div className="flex items-center">
+      <span className="mx-4">SITUS RESMI {config.headerName} ● SETORAN TERAKHIR:</span>
       {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
-        <span key={`second-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
-      )) : " MEMPROSES TRANSAKSI... ● "}
-      DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●
+        <span key={`b-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
+      )) : <span className="ml-4">MEMPROSES TRANSAKSI... ●</span>}
+      <span className="ml-4 text-red-600">DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●</span>
     </div>
 
   </div>
@@ -450,7 +450,7 @@ export default function App() {
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { animation: marquee 35s linear infinite; }
+        .animate-marquee { animation: marquee 60s linear infinite; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .animate-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
