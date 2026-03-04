@@ -10,33 +10,33 @@ const PROVIDERS = [
 // DAFTAR GAME DENGAN THUMBNAIL ASLI & DEMO URL
 const GAMES = [
   // PRAGMATIC
-  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://static.pragmaticplay.net/game_pic/square/200/vs20olympgate.png', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://static.pragmaticplay.net/game_pic/square/200/vs20starlight.png', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://wsrv.nl/?url=https://static.pragmaticplay.net/game_pic/square/200/vs20olympgate.png', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
+  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://wsrv.nl/?url=https://static.pragmaticplay.net/game_pic/square/200/vs20starlight.png', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
   
   // PG SOFT
-  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://img.pff.cloud/c_mp_p/126/1.png', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://img.pff.cloud/c_mp_p/125/1.png', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
+  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://wsrv.nl/?url=https://img.pff.cloud/c_mp_p/126/1.png', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
+  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://wsrv.nl/?url=https://img.pff.cloud/c_mp_p/125/1.png', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
   
   // HABANERO
-  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://images.habaneroslot.com/habanero/koigate.png', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
+  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://wsrv.nl/?url=https://images.habaneroslot.com/habanero/koigate.png', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
   
   // PLAY'N GO
-  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://static.playngo.com/img/games/book-of-dead-square.jpg', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
+  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://wsrv.nl/?url=https://static.playngo.com/img/games/book-of-dead-square.jpg', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
   
   // SPADEGAMING
-  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://sg-static.spadegaming.com/game/brothers_kingdom/icon.png', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
+  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://wsrv.nl/?url=https://sg-static.spadegaming.com/game/brothers_kingdom/icon.png', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
   
   // CQ9
-  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://web-static.cq9gaming.com/games/jump_high_2/icon.png', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
+  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://wsrv.nl/?url=https://web-static.cq9gaming.com/games/jump_high_2/icon.png', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
   
   // JOKER
-  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://www.joker-gaming.net/images/games/roma.jpg', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
+  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://wsrv.nl/?url=https://www.joker-gaming.net/images/games/roma.jpg', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
   
   // BETSOFT
-  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://static.betsoft.com/images/games/sugar-pop-2-double-dipped.jpg', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
+  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://wsrv.nl/?url=https://static.betsoft.com/images/games/sugar-pop-2-double-dipped.jpg', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
   
   // NETENT
-  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://static.netent.com/img/games/starburst.jpg', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
+  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://wsrv.nl/?url=https://static.netent.com/img/games/starburst.jpg', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
 ];
 
 const PROMOS = [
