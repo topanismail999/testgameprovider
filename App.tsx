@@ -174,15 +174,15 @@ export default function App() {
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView('HOME')}>
-          <div className="w-8 h-8 bg-yellow-500 rounded flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(234,179,8,0.5)]">
-            {config.logoUrl ? (
-                <img src={config.logoUrl} className="w-full h-full object-cover" alt="Logo" />
-            ) : (
+          <div className="w-8 h-8 rounded flex items-center justify-center overflow-hidden">
+      {config.logoUrl ? (
+          <img src={config.logoUrl} className="w-full h-full object-contain" alt="Logo" />
+      ) : (
                 <span className="font-black text-black">{config.headerName[0]}</span>
             )}
           </div>
           <h1 className="font-black text-white italic uppercase tracking-tighter text-xl">{config.headerName}</h1>
-        </div>
+  </div>
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-2">
