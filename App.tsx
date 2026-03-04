@@ -7,7 +7,6 @@ const PROVIDERS = [
 ];
 
 const GAMES = [
-
   { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1CBo5CmOLpgRE4DMomoMnH9xt3ceSkyB9', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
   { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1ka_74DGK4T2hCgotjWAYM6t_seA1KpmQ', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
   { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1mU1Hjt1zX6ZdX9LR4KxKVkX0cJO3PQ4P', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
@@ -32,6 +31,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
   const [user, setUser] = useState<{username: string, balance: number, win_rate?: number, bank_name?: string, account_number?: string} | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [latestDeposits, setLatestDeposits] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [jackpot, setJackpot] = useState(8234567890);
   const [currentPromo, setCurrentPromo] = useState(0);
@@ -48,7 +48,6 @@ export default function App() {
     bannerImage: '' 
   });
 
-  // Sinkronisasi Settings & Bank Admin
   const fetchSettings = async () => {
     const { data: settings } = await supabase.from('settings').select('*');
     if (settings) {
@@ -68,6 +67,17 @@ export default function App() {
     }
   };
 
+  const fetchRunningTextData = async () => {
+    const { data } = await supabase
+      .from('transactions')
+      .select('username, amount')
+      .eq('status', 'SUCCESS')
+      .eq('type', 'DEPOSIT')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (data) setLatestDeposits(data);
+  };
+
   const fetchUser = async (username: string) => {
     const { data } = await supabase.from('players').select('*').eq('username', username).single();
     if (data) setUser(data);
@@ -80,28 +90,28 @@ export default function App() {
 
   useEffect(() => {
     fetchSettings();
+    fetchRunningTextData();
     const saved = localStorage.getItem('nexus_session');
     if (saved) fetchUser(saved);
 
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
 
-    // REALTIME: Settings & Admin Banks
     const settingsChannel = supabase.channel('realtime-settings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchSettings())
       .subscribe();
 
-    // REALTIME: Player Data & Transactions
     const clientChannel = supabase.channel('realtime-client')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload: any) => {
         const currentSession = localStorage.getItem('nexus_session');
         if (payload.new.username === currentSession) {
-          setUser(payload.new); // Update saldo & winrate otomatis
+          setUser(payload.new);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload: any) => {
         const currentSession = localStorage.getItem('nexus_session');
+        fetchRunningTextData(); // Update running text data setiap ada transaksi baru
         if (currentSession && (payload.new?.username === currentSession || payload.old?.username === currentSession)) {
           fetchHistory(currentSession);
         }
@@ -116,7 +126,6 @@ export default function App() {
     };
   }, []);
 
-  // Handler Functions ( handleAuth, handleTransaction, openGame )
   const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
     setIsLoading(true);
     if (type === 'REGISTER') {
@@ -169,9 +178,17 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-32 overflow-x-hidden selection:bg-yellow-500">
       
-      {/* RUNNING TEXT */}
+      {/* RUNNING TEXT DINAMIS */}
       <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest">
-        <div className="animate-marquee inline-block">SITUS RESMI {config.headerName} ● PROVIDER TERLENGKAP ● DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●</div>
+        <div className="animate-marquee inline-block">
+          SITUS RESMI {config.headerName} ● SETORAN TERAKHIR: 
+          {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
+            <span key={i} className="ml-4">
+              {ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●
+            </span>
+          )) : " MEMPROSES TRANSAKSI... ● "}
+          DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●
+        </div>
       </div>
 
       {/* NAVBAR */}
@@ -277,7 +294,7 @@ export default function App() {
         </div>
       ) : (
         <>
-          {/* BANNER PROMO */}
+          {/* BANNER PROMO DENGAN GAMBAR DINAMIS */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div 
               className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden transition-all duration-1000 shadow-2xl border border-white/10 bg-gradient-to-br ${PROMOS[currentPromo].color}`}
@@ -363,7 +380,7 @@ export default function App() {
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { animation: marquee 30s linear infinite; }
+        .animate-marquee { animation: marquee 35s linear infinite; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .animate-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
