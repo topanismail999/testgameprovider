@@ -8,6 +8,7 @@ export default function Admin() {
   const [adminBanks, setAdminBanks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   
   const [searchPlayer, setSearchPlayer] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
@@ -17,7 +18,8 @@ export default function Admin() {
     accentColor: "#EAB308",
     bannerTitle: "",
     bannerSub: "",
-    bannerImages: ["", "", ""] // Menggunakan array untuk 3 slide
+    logoUrl: "",
+    bannerImages: ["", "", ""]
   });
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -51,6 +53,7 @@ export default function Admin() {
         if (item.key === 'banner_title') configObj.bannerTitle = item.value;
         if (item.key === 'banner_sub') configObj.bannerSub = item.value;
         if (item.key === 'accent_color') configObj.accentColor = item.value;
+        if (item.key === 'logo_url') configObj.logoUrl = item.value;
         if (item.key === 'banner_image_1') configObj.bannerImages[0] = item.value;
         if (item.key === 'banner_image_2') configObj.bannerImages[1] = item.value;
         if (item.key === 'banner_image_3') configObj.bannerImages[2] = item.value;
@@ -72,6 +75,24 @@ export default function Admin() {
 
     return () => { supabase.removeChannel(adminChannel); };
   }, [fetchData, fetchSettings]);
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingLogo(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+      const file = event.target.files[0];
+      const fileName = `logo-${Date.now()}.${file.name.split('.').pop()}`;
+      
+      const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
+      await supabase.from('settings').upsert({ key: 'logo_url', value: data.publicUrl }, { onConflict: 'key' });
+      
+      setSysConfig(prev => ({ ...prev, logoUrl: data.publicUrl }));
+      alert("Logo Berhasil Diperbarui!");
+    } catch (error: any) { alert("Gagal Upload Logo: " + error.message); } finally { setUploadingLogo(false); }
+  };
 
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
     try {
@@ -154,7 +175,13 @@ export default function Admin() {
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans">
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col p-8 hidden md:flex shadow-sm">
         <div className="flex items-center gap-3 mb-12">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center font-black text-white shadow-lg text-xl">N</div>
+          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden shadow-lg">
+            {sysConfig.logoUrl ? (
+                <img src={sysConfig.logoUrl} className="w-full h-full object-cover" alt="Logo" />
+            ) : (
+                <span className="font-black text-white text-xl">{sysConfig.headerName[0] || 'N'}</span>
+            )}
+          </div>
           <h1 className="font-black text-slate-900 uppercase tracking-tighter text-xl">{sysConfig.headerName || "NEXUSHUB"}</h1>
         </div>
         <nav className="space-y-2 flex-1">
@@ -197,7 +224,23 @@ export default function Admin() {
         {activeTab === 'SISTEM' && (
           <div className="grid md:grid-cols-1 gap-10 animate-in fade-in">
              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
-                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Visual & Banner Manager</h4>
+                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Identity & Banner Manager</h4>
+                
+                {/* LOGO UPLOAD SECTION */}
+                <div className="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200 mb-8">
+                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-4">Official Logo (Recommended 512x512 PNG)</label>
+                    <div className="flex items-center gap-6">
+                        <div className="w-24 h-24 bg-white rounded-2xl border flex items-center justify-center overflow-hidden relative shadow-inner">
+                            {sysConfig.logoUrl ? <img src={sysConfig.logoUrl} className="w-full h-full object-contain" alt="Logo Preview" /> : <span className="text-[10px] font-black text-slate-300">NO LOGO</span>}
+                            {uploadingLogo && <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-[8px] font-black animate-pulse">UPLOADING...</div>}
+                        </div>
+                        <div className="flex-1">
+                            <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-[10px] font-black block w-full mb-2" />
+                            <p className="text-[9px] text-slate-400 italic">Logo ini akan muncul di Navbar User dan Admin.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="grid md:grid-cols-3 gap-6">
                    {sysConfig.bannerImages.map((img, idx) => (
                      <div key={idx} className="space-y-3">
@@ -226,7 +269,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Tab PEMAIN, TRANSAKSI, ADMIN BANK tetap sama sesuai kode awal Anda */}
         {activeTab === 'ADMIN BANK' && (
             <div className="space-y-6 animate-in fade-in">
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
