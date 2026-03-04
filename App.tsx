@@ -34,7 +34,7 @@ export default function App() {
   const [adminBanks, setAdminBanks] = useState<any[]>([]);
 
   const [config, setConfig] = useState({
-    headerName: 'NEXUSHUB',
+    headerName: 'ELCYQQ',
     bannerTitle: 'BONUS NEW MEMBER 100%',
     bannerSub: 'Berlaku untuk Semua Provider Slot',
     bannerImages: [] as string[]
@@ -203,7 +203,7 @@ export default function App() {
                 <div 
                   key={idx} 
                   className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                  style={{ backgroundImage: `linear-gradient(to top, rgba(2,6,23,0.9), transparent), url('${img}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  style={{ backgroundImage: `url('${img}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                 >
                   <div className="absolute bottom-8 left-8">
                     <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase drop-shadow-2xl">{config.bannerTitle}</h2>
