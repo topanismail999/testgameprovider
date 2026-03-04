@@ -69,6 +69,7 @@ export default function Admin() {
     fetchData();
     fetchSettings();
 
+    // REAL-TIME ADMIN SYNC
     const adminChannel = supabase.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => fetchData())
@@ -296,7 +297,7 @@ export default function Admin() {
                         </div>
                         <div className="flex-1 space-y-4">
                             <p className="text-xs text-slate-500 font-bold uppercase italic leading-relaxed">
-                                Upload gambar QRIS toko Anda di sini. Gambar ini akan muncul secara otomatis di panel deposit pemain.
+                                Upload gambar QRIS toko Anda di sini. Gambar ini akan muncul di daftar bank deposit pemain.
                             </p>
                             <input type="file" accept="image/*" onChange={handleQrisUpload} className="text-[10px] font-black block w-full" />
                         </div>
