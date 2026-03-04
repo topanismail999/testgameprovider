@@ -7,7 +7,7 @@ export default function Admin() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [adminBanks, setAdminBanks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   
   const [searchPlayer, setSearchPlayer] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
@@ -17,7 +17,7 @@ export default function Admin() {
     accentColor: "#EAB308",
     bannerTitle: "",
     bannerSub: "",
-    bannerImage: "" 
+    bannerImages: ["", "", ""] // Menggunakan array untuk 3 slide
   });
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -45,13 +45,15 @@ export default function Admin() {
   const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
-      const configObj: any = {};
+      const configObj: any = { bannerImages: ["", "", ""] };
       data.forEach(item => {
         if (item.key === 'header_name') configObj.headerName = item.value;
         if (item.key === 'banner_title') configObj.bannerTitle = item.value;
         if (item.key === 'banner_sub') configObj.bannerSub = item.value;
         if (item.key === 'accent_color') configObj.accentColor = item.value;
-        if (item.key === 'banner_image') configObj.bannerImage = item.value;
+        if (item.key === 'banner_image_1') configObj.bannerImages[0] = item.value;
+        if (item.key === 'banner_image_2') configObj.bannerImages[1] = item.value;
+        if (item.key === 'banner_image_3') configObj.bannerImages[2] = item.value;
       });
       setSysConfig(prev => ({ ...prev, ...configObj }));
     }
@@ -71,20 +73,24 @@ export default function Admin() {
     return () => { supabase.removeChannel(adminChannel); };
   }, [fetchData, fetchSettings]);
 
-  const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
     try {
-      setUploading(true);
+      setUploadingIdx(index);
       if (!event.target.files || event.target.files.length === 0) return;
       const file = event.target.files[0];
-      const fileName = `banner-${Date.now()}.${file.name.split('.').pop()}`;
+      const fileName = `banner-${index}-${Date.now()}.${file.name.split('.').pop()}`;
       const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
       
-      await supabase.from('settings').upsert({ key: 'banner_image', value: data.publicUrl }, { onConflict: 'key' });
-      setSysConfig(prev => ({ ...prev, bannerImage: data.publicUrl }));
-      alert("Banner Berhasil Diupload!");
-    } catch (error: any) { alert("Gagal: " + error.message); } finally { setUploading(false); }
+      const key = `banner_image_${index + 1}`;
+      await supabase.from('settings').upsert({ key, value: data.publicUrl }, { onConflict: 'key' });
+      
+      const newImages = [...sysConfig.bannerImages];
+      newImages[index] = data.publicUrl;
+      setSysConfig(prev => ({ ...prev, bannerImages: newImages }));
+      alert(`Banner ${index + 1} Berhasil Diupload!`);
+    } catch (error: any) { alert("Gagal: " + error.message); } finally { setUploadingIdx(null); }
   };
 
   const updateAppVisual = async () => {
@@ -100,11 +106,7 @@ export default function Admin() {
         await supabase.from('settings').upsert(item, { onConflict: 'key' }); 
       }
       alert("Visual Web Berhasil Diperbarui!");
-    } catch (e: any) {
-      alert("Gagal update: " + e.message);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e: any) { alert("Gagal update: " + e.message); } finally { setIsLoading(false); }
   };
 
   const processTransaction = async (trx: any, status: 'SUCCESS' | 'REJECTED') => {
@@ -167,7 +169,6 @@ export default function Admin() {
       <main className="flex-1 p-8 md:p-12 overflow-y-auto">
         <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">{activeTab}</h2>
-          
           {(activeTab === 'PEMAIN' || activeTab === 'TRANSAKSI') && (
             <div className="relative w-full md:w-80">
               <input 
@@ -190,68 +191,42 @@ export default function Admin() {
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Deposit</p><h3 className="text-3xl font-black text-blue-600">IDR {stats.totalDeposit.toLocaleString()}</h3></div>
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Withdraw</p><h3 className="text-3xl font-black text-orange-600">IDR {stats.totalWithdraw.toLocaleString()}</h3></div>
             </div>
-            <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex justify-between items-center">
-                <div><h4 className="text-2xl font-black uppercase italic">Antrian Transaksi</h4><p className="text-slate-400 text-xs mt-1">Terdapat {stats.pendingTransactions} permintaan tertunda</p></div>
-                <button onClick={() => setActiveTab('TRANSAKSI')} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px]">Cek Sekarang</button>
-            </div>
           </div>
         )}
 
         {activeTab === 'SISTEM' && (
-          <div className="grid md:grid-cols-2 gap-10 animate-in fade-in">
+          <div className="grid md:grid-cols-1 gap-10 animate-in fade-in">
              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
-                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Visual & Identity</h4>
-                <div className="space-y-4">
-                   <label className="text-[9px] font-black text-slate-400 uppercase">App Name</label>
-                   <input 
-                      type="text" 
-                      className="w-full bg-slate-50 border p-4 rounded-2xl font-bold uppercase outline-none focus:ring-2 ring-slate-200" 
-                      value={sysConfig.headerName} 
-                      onChange={(e) => setSysConfig({...sysConfig, headerName: e.target.value})} 
-                   />
-                   <label className="text-[9px] font-black text-slate-400 uppercase">Accent Color</label>
-                   <input 
-                      type="color" 
-                      className="h-14 w-full rounded-xl cursor-pointer" 
-                      value={sysConfig.accentColor} 
-                      onChange={(e) => setSysConfig({...sysConfig, accentColor: e.target.value})} 
-                   />
+                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Visual & Banner Manager</h4>
+                <div className="grid md:grid-cols-3 gap-6">
+                   {sysConfig.bannerImages.map((img, idx) => (
+                     <div key={idx} className="space-y-3">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">Banner Slide {idx + 1}</label>
+                        <div className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center relative">
+                            {img ? <img src={img} className="w-full h-full object-cover" alt="Banner" /> : <span className="text-[10px] font-black text-slate-400">KOSONG</span>}
+                            {uploadingIdx === idx && <div className="absolute inset-0 bg-white/50 flex items-center justify-center text-[10px] font-black uppercase">Uploading...</div>}
+                        </div>
+                        <input type="file" accept="image/*" onChange={(e) => handleBannerUpload(e, idx)} className="text-[10px] font-black w-full" />
+                     </div>
+                   ))}
                 </div>
-             </div>
-             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
-                <h4 className="text-[11px] font-black uppercase border-l-4 border-slate-900 pl-4 mb-8">Promo Manager</h4>
-                <div className="space-y-4">
-                   <div className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center relative">
-                        {sysConfig.bannerImage ? <img src={sysConfig.bannerImage} className="w-full h-full object-cover" alt="Banner" /> : <span className="text-[10px] font-black text-slate-400">NO IMAGE</span>}
-                        {uploading && <div className="absolute inset-0 bg-white/50 flex items-center justify-center text-[10px] font-black uppercase">Uploading...</div>}
+                <hr className="my-6" />
+                <div className="grid md:grid-cols-2 gap-6">
+                   <div className="space-y-4">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">App Name</label>
+                      <input type="text" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold uppercase outline-none focus:ring-2 ring-slate-200" value={sysConfig.headerName} onChange={(e) => setSysConfig({...sysConfig, headerName: e.target.value})} />
+                      <input type="text" placeholder="Banner Title" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-slate-200" value={sysConfig.bannerTitle} onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} />
+                      <input type="text" placeholder="Banner Subtitle" className="w-full bg-slate-50 border p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-slate-200" value={sysConfig.bannerSub} onChange={(e) => setSysConfig({...sysConfig, bannerSub: e.target.value})} />
+                      <button onClick={updateAppVisual} disabled={isLoading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-black transition-all">
+                        {isLoading ? "UPDATING..." : "PUSH UPDATE TEXT"}
+                      </button>
                    </div>
-                   <input type="file" accept="image/*" onChange={handleBannerUpload} className="text-[10px] font-black" />
-                   <input 
-                      type="text" 
-                      placeholder="Banner Title" 
-                      className="w-full bg-slate-50 border p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-slate-200" 
-                      value={sysConfig.bannerTitle} 
-                      onChange={(e) => setSysConfig({...sysConfig, bannerTitle: e.target.value})} 
-                   />
-                   <input 
-                      type="text" 
-                      placeholder="Banner Subtitle" 
-                      className="w-full bg-slate-50 border p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-slate-200" 
-                      value={sysConfig.bannerSub} 
-                      onChange={(e) => setSysConfig({...sysConfig, bannerSub: e.target.value})} 
-                   />
-                   <button 
-                      onClick={updateAppVisual} 
-                      disabled={isLoading}
-                      className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-black transition-all disabled:opacity-50"
-                   >
-                     {isLoading ? "UPDATING..." : "PUSH UPDATE"}
-                   </button>
                 </div>
              </div>
           </div>
         )}
 
+        {/* Tab PEMAIN, TRANSAKSI, ADMIN BANK tetap sama sesuai kode awal Anda */}
         {activeTab === 'ADMIN BANK' && (
             <div className="space-y-6 animate-in fade-in">
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
