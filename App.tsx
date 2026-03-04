@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
-// DAFTAR PROVIDER LENGKAP
 const PROVIDERS = [
   "ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "PLAY'N GO", 
   "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"
 ];
 
-// DAFTAR GAME (MENGEMBALIKAN URL GAMBAR ASLI MILIKMU)
 const GAMES = [
   { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1CBo5CmOLpgRE4DMomoMnH9xt3ceSkyB9', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
   { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1ka_74DGK4T2hCgotjWAYM6t_seA1KpmQ', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
@@ -27,9 +25,12 @@ const PROMOS = [
   { id: 2, color: "from-red-600 to-rose-950" },
 ];
 
+// LIST BANK/EWALLET
+const BANK_OPTIONS = ["BCA", "BNI", "BRI", "MANDIRI", "DANA", "OVO", "GOPAY", "LINKAJA"];
+
 export default function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
-  const [user, setUser] = useState<{username: string, balance: number, win_rate?: number} | null>(null);
+  const [user, setUser] = useState<{username: string, balance: number, win_rate?: number, bank_name?: string, account_number?: string} | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [jackpot, setJackpot] = useState(8234567890);
@@ -37,20 +38,30 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedGameUrl, setSelectedGameUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ username: '', password: '', amount: '' });
+  
+  // FORM DATA EXTENDED
+  const [formData, setFormData] = useState({ 
+    username: '', 
+    password: '', 
+    amount: '', 
+    bank_name: BANK_OPTIONS[0], 
+    account_number: '',
+    target_bank: '' // Untuk Deposit (Bank Admin)
+  });
 
   const [config, setConfig] = useState({
     headerName: 'NEXUSHUB',
     bannerTitle: 'BONUS NEW MEMBER 100%',
     bannerSub: 'Berlaku untuk Semua Provider Slot',
-    bannerImage: '' 
+    bannerImage: '',
+    adminBanks: [] as any[] // Daftar bank admin dari DB
   });
 
-  // FETCH SETTINGS DARI SUPABASE
   const fetchSettings = async () => {
     const { data } = await supabase.from('settings').select('*');
+    const { data: bankData } = await supabase.from('admin_banks').select('*');
     if (data) {
-      const newConfig = { ...config };
+      const newConfig = { ...config, adminBanks: bankData || [] };
       data.forEach(item => {
         if (item.key === 'header_name') newConfig.headerName = item.value;
         if (item.key === 'banner_title') newConfig.bannerTitle = item.value;
@@ -58,10 +69,10 @@ export default function App() {
         if (item.key === 'banner_image') newConfig.bannerImage = item.value;
       });
       setConfig(newConfig);
+      if (bankData && bankData.length > 0) setFormData(prev => ({...prev, target_bank: `${bankData[0].bank_name} - ${bankData[0].account_number}`}));
     }
   };
 
-  // FETCH DATA PEMAIN UNTUK SALDO
   const fetchUser = async (username: string) => {
     const { data } = await supabase.from('players').select('*').eq('username', username).single();
     if (data) setUser(data);
@@ -80,22 +91,15 @@ export default function App() {
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
 
-    // REAL-TIME: SETTINGS
     const settingsChannel = supabase.channel('realtime-settings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchSettings())
       .subscribe();
 
-    // REAL-TIME: SALDO PEMAIN
     const clientChannel = supabase.channel('realtime-client')
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'players'
-      }, (payload: any) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload: any) => {
         const currentSession = localStorage.getItem('nexus_session');
-        if (payload.new.username === currentSession) {
-          setUser(payload.new);
-        }
+        if (payload.new.username === currentSession) setUser(payload.new);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
         const currentSession = localStorage.getItem('nexus_session');
@@ -104,17 +108,23 @@ export default function App() {
       .subscribe();
 
     return () => { 
-      clearInterval(pTimer); 
-      clearInterval(jTimer); 
-      supabase.removeChannel(settingsChannel); 
-      supabase.removeChannel(clientChannel);
+      clearInterval(pTimer); clearInterval(jTimer); 
+      supabase.removeChannel(settingsChannel); supabase.removeChannel(clientChannel);
     };
   }, []);
 
   const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
     setIsLoading(true);
     if (type === 'REGISTER') {
-      const { error } = await supabase.from('players').insert([{ username: formData.username, password: formData.password, balance: 0, win_rate: 50 }]);
+      if (!formData.account_number) { alert("Nomor Rekening wajib diisi!"); setIsLoading(false); return; }
+      const { error } = await supabase.from('players').insert([{ 
+        username: formData.username, 
+        password: formData.password, 
+        bank_name: formData.bank_name,
+        account_number: formData.account_number,
+        balance: 0, 
+        win_rate: 50 
+      }]);
       if (error) alert("Username sudah terpakai!"); else alert("Berhasil! Silakan Login.");
     } else {
       const { data } = await supabase.from('players').select('*').eq('username', formData.username).eq('password', formData.password).single();
@@ -131,7 +141,13 @@ export default function App() {
   const handleTransaction = async () => {
     if (!user || !formData.amount || Number(formData.amount) < 25000) return alert("Minimal IDR 25,000!");
     setIsLoading(true);
-    const { error } = await supabase.from('transactions').insert([{ username: user.username, type: activeView, amount: Number(formData.amount), status: 'PENDING' }]);
+    const { error } = await supabase.from('transactions').insert([{ 
+      username: user.username, 
+      type: activeView, 
+      amount: Number(formData.amount), 
+      status: 'PENDING',
+      note: activeView === 'DEPOSIT' ? `Ke: ${formData.target_bank}` : `Dari: ${user.bank_name} (${user.account_number})`
+    }]);
     setIsLoading(false);
     if (error) alert("Gagal: " + error.message);
     else { alert(`Permintaan ${activeView} Dikirim!`); setFormData({ ...formData, amount: '' }); setActiveView('HOME'); }
@@ -197,6 +213,7 @@ export default function App() {
                     <p className={`text-[10px] font-black uppercase ${trx.type === 'DEPOSIT' ? 'text-blue-400' : 'text-orange-400'}`}>{trx.type}</p>
                     <p className="text-sm font-black text-white font-mono italic">IDR {trx.amount.toLocaleString()}</p>
                     <p className="text-[8px] text-slate-500 uppercase font-bold">{new Date(trx.created_at).toLocaleString()}</p>
+                    {trx.note && <p className="text-[7px] text-slate-400 italic mt-1">{trx.note}</p>}
                   </div>
                ))}
             </div>
@@ -211,6 +228,16 @@ export default function App() {
               <div className="space-y-4">
                  <input type="text" placeholder="Username" onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
                  <input type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
+                 
+                 {activeView === 'REGISTER' && (
+                   <>
+                    <select value={formData.bank_name} onChange={(e) => setFormData({...formData, bank_name: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-white appearance-none text-center uppercase font-black text-xs">
+                      {BANK_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <input type="number" placeholder="Nomor Rekening / HP" onChange={(e) => setFormData({...formData, account_number: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
+                   </>
+                 )}
+
                  <button onClick={() => handleAuth(activeView)} className="w-full bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-lg">Konfirmasi</button>
                  <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 uppercase font-black block w-full mt-4">Kembali</button>
               </div>
@@ -219,8 +246,32 @@ export default function App() {
       ) : activeView === 'DEPOSIT' || activeView === 'WITHDRAW' ? (
         <div className="max-w-md mx-auto px-6 mt-8 animate-in slide-in-from-bottom-10 duration-500">
            <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center">
-              <h2 className="text-2xl font-black text-white italic uppercase mb-8 tracking-tighter">{activeView} SALDO</h2>
+              <h2 className="text-2xl font-black text-white italic uppercase mb-4 tracking-tighter">{activeView} SALDO</h2>
+              
               <div className="space-y-6">
+                 {activeView === 'DEPOSIT' && (
+                    <div className="text-left bg-black/40 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[8px] font-black text-slate-500 uppercase mb-2">Tujuan Transfer:</p>
+                      <select 
+                        className="w-full bg-slate-800 text-white p-3 rounded-xl text-[10px] font-bold outline-none border border-white/10"
+                        onChange={(e) => setFormData({...formData, target_bank: e.target.value})}
+                      >
+                        {config.adminBanks.map((b: any) => (
+                          <option key={b.id} value={`${b.bank_name} - ${b.account_number}`}>
+                            {b.bank_name} : {b.account_number} (A/N {b.holder_name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                 )}
+
+                 {activeView === 'WITHDRAW' && (
+                    <div className="text-left bg-black/40 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[8px] font-black text-slate-500 uppercase">Rekening Tujuan Anda:</p>
+                      <p className="text-xs font-black text-yellow-500 mt-1 uppercase">{user?.bank_name} - {user?.account_number}</p>
+                    </div>
+                 )}
+
                  <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
                     <input type="number" placeholder="Min. 25.000" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
                  </div>
@@ -273,7 +324,7 @@ export default function App() {
             ))}
           </div>
 
-          {/* GAMES GRID (MENGGUNAKAN GAMBAR ASLI MILIKMU) */}
+          {/* GAMES GRID */}
           <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5 font-black uppercase pb-10">
             {filteredGames.map((game) => (
               <div key={game.id} onClick={() => openGame(game.demoUrl)} className="group cursor-pointer">
