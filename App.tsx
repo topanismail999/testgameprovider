@@ -179,15 +179,30 @@ export default function App() {
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-40 overflow-x-hidden selection:bg-yellow-500">
       
       {/* RUNNING TEXT */}
-      <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest">
-        <div className="animate-marquee inline-block">
-          SITUS RESMI {config.headerName} ● SETORAN TERAKHIR: 
-          {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
-            <span key={i} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
-          )) : " MEMPROSES TRANSAKSI... ● "}
-          DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●
-        </div>
-      </div>
+<div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest flex">
+  {/* Wrapper untuk animasi yang meluncur ke kiri */}
+  <div className="flex animate-marquee whitespace-nowrap">
+    
+    {/* Konten Pertama */}
+    <div className="inline-block">
+      SITUS RESMI {config.headerName} ● SETORAN TERAKHIR: 
+      {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
+        <span key={`first-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
+      )) : " MEMPROSES TRANSAKSI... ● "}
+      DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●
+    </div>
+
+    {/* Konten Kedua (Duplikat Identik untuk menyambung) */}
+    <div className="inline-block">
+      SITUS RESMI {config.headerName} ● SETORAN TERAKHIR: 
+      {latestDeposits.length > 0 ? latestDeposits.map((ld, i) => (
+        <span key={`second-${i}`} className="ml-4">{ld.username.substring(0,3)}*** - IDR {ld.amount.toLocaleString()} ✅ ●</span>
+      )) : " MEMPROSES TRANSAKSI... ● "}
+      DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●
+    </div>
+
+  </div>
+</div>
 
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 px-6 h-16 flex justify-between items-center shadow-2xl">
