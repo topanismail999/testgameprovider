@@ -1,12 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
-const PROVIDERS = ["ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "JOKER", "SPADEGAMING"];
+// DAFTAR PROVIDER LENGKAP
+const PROVIDERS = [
+  "ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "PLAY'N GO", 
+  "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"
+];
+
+// DAFTAR GAME DENGAN THUMBNAIL ASLI & DEMO URL
 const GAMES = [
-  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: '⚡', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: '🀄', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: '🐟', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: '⭐', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  // PRAGMATIC
+  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://static.pragmaticplay.net/game_pic/square/200/vs20olympgate.png', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
+  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://static.pragmaticplay.net/game_pic/square/200/vs20starlight.png', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  
+  // PG SOFT
+  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://img.pff.cloud/c_mp_p/126/1.png', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
+  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://img.pff.cloud/c_mp_p/125/1.png', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
+  
+  // HABANERO
+  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://images.habaneroslot.com/habanero/koigate.png', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
+  
+  // PLAY'N GO
+  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://static.playngo.com/img/games/book-of-dead-square.jpg', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
+  
+  // SPADEGAMING
+  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://sg-static.spadegaming.com/game/brothers_kingdom/icon.png', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
+  
+  // CQ9
+  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://web-static.cq9gaming.com/games/jump_high_2/icon.png', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
+  
+  // JOKER
+  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://www.joker-gaming.net/images/games/roma.jpg', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
+  
+  // BETSOFT
+  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://static.betsoft.com/images/games/sugar-pop-2-double-dipped.jpg', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
+  
+  // NETENT
+  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://static.netent.com/img/games/starburst.jpg', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
 ];
 
 const PROMOS = [
@@ -32,7 +62,6 @@ export default function App() {
     bannerSub: 'Berlaku untuk Semua Provider Slot'
   });
 
-  // --- LOGIKA BARU: ENGINE KONTROL ---
   const openGame = (gameUrl: string) => {
     if (!user) {
       setActiveView('LOGIN');
@@ -45,7 +74,6 @@ export default function App() {
     }
 
     setIsLoading(true);
-    // Simulasi Engine: Mengirimkan sinyal "Control Active" ke logger (opsional)
     console.log(`Engine: User ${user.username} playing with WinRate ${user.win_rate}%`);
     
     setTimeout(() => {
@@ -85,7 +113,6 @@ export default function App() {
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
     
-    // FIX: REALTIME UNTUK SALDO & WINRATE (Penting untuk Admin Control)
     const clientChannel = supabase.channel('realtime-client')
       .on('postgres_changes', { 
         event: 'UPDATE', 
@@ -93,7 +120,6 @@ export default function App() {
         table: 'players',
         filter: user ? `username=eq.${user.username}` : undefined 
       }, (payload: any) => {
-        console.log("Realtime Update Received:", payload.new);
         setUser(payload.new);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
@@ -124,7 +150,7 @@ export default function App() {
     setIsLoading(true);
     if (type === 'REGISTER') {
       const { error } = await supabase.from('players').insert([
-        { username: formData.username, password: formData.password, balance: 0, win_rate: 50 } // Default Winrate 50
+        { username: formData.username, password: formData.password, balance: 0, win_rate: 50 }
       ]);
       if (error) alert("Gagal Daftar!"); else alert("Berhasil! Silakan Login.");
     } else {
@@ -162,7 +188,7 @@ export default function App() {
       
       {/* RUNNING TEXT */}
       <div className="bg-yellow-500 text-black py-1.5 overflow-hidden whitespace-nowrap border-b border-yellow-600 text-[10px] font-black uppercase tracking-widest">
-        <div className="animate-marquee inline-block">GATES OF OLYMPUS 1000 GACOR PARAH ● DEPOSIT QRIS OTOMATIS ● WD TANPA RIBET ● HUBUNGI CS JIKA ADA KENDALA ●</div>
+        <div className="animate-marquee inline-block">SITUS RESMI {config.headerName} ● PROVIDER TERLENGKAP: PG SOFT, HABANERO, PRAGMATIC ● DEPOSIT QRIS OTOMATIS ● WD CEPAT ● WINRATE ADMIN AKTIF ●</div>
       </div>
 
       {/* NAVBAR */}
@@ -261,7 +287,7 @@ export default function App() {
         </div>
       ) : (
         <>
-          {/* BANNER PROMO DARI ADMIN */}
+          {/* BANNER PROMO */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden bg-gradient-to-br ${PROMOS[currentPromo].color} transition-all duration-1000 shadow-2xl border border-white/10`}>
               <div className="relative z-10 h-full flex flex-col justify-center">
@@ -288,29 +314,41 @@ export default function App() {
              </button>
           </div>
 
+          {/* PROVIDER FILTER TABS */}
           <div className="max-w-7xl mx-auto px-6 mt-10 overflow-x-auto no-scrollbar flex gap-2">
             {PROVIDERS.map(p => (
               <button key={p} onClick={() => setActiveTab(p)} className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase whitespace-nowrap transition-all border ${activeTab === p ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg scale-105' : 'bg-slate-900 text-slate-400 border-white/5'}`}>{p}</button>
             ))}
           </div>
 
-          <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5 font-black uppercase">
+          {/* GAMES GRID DENGAN GAMBAR ASLI */}
+          <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5 font-black uppercase pb-10">
             {filteredGames.map((game) => (
               <div key={game.id} onClick={() => openGame(game.demoUrl)} className="group cursor-pointer">
                 <div className="relative aspect-[3/4] rounded-[2.5rem] bg-slate-900 border border-white/5 overflow-hidden transition-all duration-500 group-hover:border-yellow-500/50 group-hover:-translate-y-2 shadow-xl shadow-black/50">
-                  <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-b from-slate-800 to-black group-hover:scale-110 transition-transform duration-700">{game.image}</div>
-                  <div className="absolute bottom-0 left-0 w-full p-3 bg-black/70 backdrop-blur-md border-t border-white/5">
-                    <p className="text-[9px] font-black text-emerald-400 text-center uppercase tracking-widest">GACOR RTP {game.rtp}%</p>
+                  
+                  {/* GAME THUMBNAIL */}
+                  <img src={game.image} alt={game.name} className="w-full h-full object-cover brightness-90 group-hover:brightness-110 group-hover:scale-110 transition-all duration-700" />
+                  
+                  {/* RTP OVERLAY */}
+                  <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent border-t border-white/5">
+                    <p className="text-[9px] font-black text-emerald-400 text-center uppercase tracking-widest">RTP {game.rtp}%</p>
                   </div>
-                  <div className="absolute top-4 right-4 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></div>
+                  
+                  {/* LIVE INDICATOR */}
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></div>
+                    <span className="text-[7px] text-white font-black">HOT</span>
+                  </div>
                 </div>
-                <h4 className="mt-3 text-[10px] font-black text-center text-slate-400 uppercase truncate px-2">{game.name}</h4>
+                <h4 className="mt-3 text-[10px] font-black text-center text-slate-400 uppercase truncate px-2 group-hover:text-yellow-500 transition-colors">{game.name}</h4>
               </div>
             ))}
           </div>
         </>
       )}
 
+      {/* GAME MODAL (IFRAME) */}
       {selectedGameUrl && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col">
           <div className="h-12 bg-slate-950 flex justify-between items-center px-6 border-b border-white/10">
@@ -318,12 +356,13 @@ export default function App() {
               <p className="text-[10px] font-black text-yellow-500 uppercase italic">Control Engine: {user?.win_rate}% Active</p>
               <div className="h-2 w-2 bg-emerald-500 rounded-full animate-ping"></div>
             </div>
-            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-4 py-1 rounded text-[10px] font-black uppercase shadow-lg">Exit Game</button>
+            <button onClick={() => setSelectedGameUrl(null)} className="bg-red-600 text-white px-4 py-1 rounded text-[10px] font-black uppercase shadow-lg hover:bg-red-700">Exit Game</button>
           </div>
           <iframe src={selectedGameUrl} className="flex-1 w-full border-none" allowFullScreen title="Slot Game" />
         </div>
       )}
 
+      {/* LOADING OVERLAY */}
       {isLoading && (
         <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
           <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.5)]"></div>
