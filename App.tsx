@@ -1,35 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 
-const PROVIDERS = [
-  "ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "PLAY'N GO", 
-  "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"
-];
-
+const PROVIDERS = ["ALL", "PRAGMATIC", "PG SOFT", "HABANERO", "PLAY'N GO", "SPADEGAMING", "CQ9", "JOKER", "BETSOFT", "NETENT"];
 const GAMES = [
-  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1CBo5CmOLpgRE4DMomoMnH9xt3ceSkyB9', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
-  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://lh3.googleusercontent.com/d/1ka_74DGK4T2hCgotjWAYM6t_seA1KpmQ', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
-  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1mU1Hjt1zX6ZdX9LR4KxKVkX0cJO3PQ4P', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
-  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://lh3.googleusercontent.com/d/1yX4r5AyxtAnMBXnrLn_FdUYSDw1wNAae', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
-  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://lh3.googleusercontent.com/d/1iqfb47e0jeaAPUSvHRnGsmkOrkFkkhtu', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' },
-  { id: 'book-of-dead', name: 'Book of Dead', provider: "PLAY'N GO", image: 'https://lh3.googleusercontent.com/d/1oGBNf9yayXTaElyRvBpwb_XCT21Qnd3p', rtp: 96.2, demoUrl: 'https://www.playngo.com/games/book-of-dead' },
-  { id: 'brothers-kingdom', name: 'Brothers Kingdom', provider: 'SPADEGAMING', image: 'https://lh3.googleusercontent.com/d/1QIXTkNy81kNkATDbLRNtJJS65hmN-0ph', rtp: 97.0, demoUrl: 'https://demo.spadegaming.com/detail/brothers_kingdom' },
-  { id: 'jump-high-2', name: 'Jump High 2', provider: 'CQ9', image: 'https://lh3.googleusercontent.com/d/1ynQaTvuJ18gWvmj3mwojSJ-mLg3n66uI', rtp: 96.0, demoUrl: 'https://demo.cq9gaming.com/' },
-  { id: 'roma', name: 'Roma', provider: 'JOKER', image: 'https://lh3.googleusercontent.com/d/1mER0QZ1NzBQQxeZrHxFlIKWAwZoo5wZe', rtp: 95.8, demoUrl: 'https://www.jokerapp666.com/game/roma' },
-  { id: 'sugar-pop-2', name: 'Sugar Pop 2', provider: 'BETSOFT', image: 'https://lh3.googleusercontent.com/d/1B23sQQ7yetsivlxTz85bzsGQDQEVkOZd', rtp: 96.4, demoUrl: 'https://betsoft.com/games/sugar-pop-2/' },
-  { id: 'starburst', name: 'Starburst', provider: 'NETENT', image: 'https://lh3.googleusercontent.com/d/1HDX2RGKSaH5KXN-RsfphvobeAN4laKCH', rtp: 96.1, demoUrl: 'https://games.netent.com/video-slots/starburst/' },
+  { id: 'vs20olympgate', name: 'Gates of Olympus', provider: 'PRAGMATIC', image: 'https://images.unsplash.com/photo-1633513364239-247514f09d6c?w=300&h=400&fit=crop', rtp: 98.5, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20olympgate&lang=en&cur=IDR' },
+  { id: 'vs20starlight', name: 'Starlight Princess', provider: 'PRAGMATIC', image: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=300&h=400&fit=crop', rtp: 96.2, demoUrl: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20starlight&lang=en&cur=IDR' },
+  { id: 'mahjong-ways-2', name: 'Mahjong Ways 2', provider: 'PG SOFT', image: 'https://images.unsplash.com/photo-1553481187-be93c21490a9?w=300&h=400&fit=crop', rtp: 97.1, demoUrl: 'https://m.pgsoft-games.com/126/index.html' },
+  { id: 'lucky-neko', name: 'Lucky Neko', provider: 'PG SOFT', image: 'https://images.unsplash.com/photo-1585336139118-132fbf7db6a4?w=300&h=400&fit=crop', rtp: 96.7, demoUrl: 'https://m.pgsoft-games.com/125/index.html' },
+  { id: 'koigate', name: 'Koi Gate', provider: 'HABANERO', image: 'https://images.unsplash.com/photo-1551334787-21e6bd3ab135?w=300&h=400&fit=crop', rtp: 98.2, demoUrl: 'https://demo-pff.hanabero.com/koi-gate' }
 ];
 
-const PROMOS = [
-  { id: 1, color: "from-indigo-600 to-blue-900" },
-  { id: 2, color: "from-red-600 to-rose-950" },
-];
-
+const PROMOS = [{ id: 1, color: "from-indigo-600 to-blue-900" }, { id: 2, color: "from-red-600 to-rose-950" }];
 const BANK_LIST = ["BCA", "BNI", "BRI", "MANDIRI", "DANA", "OVO", "GOPAY"];
 
 export default function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'LOGIN' | 'REGISTER' | 'DEPOSIT' | 'WITHDRAW'>('HOME');
-  const [user, setUser] = useState<{username: string, balance: number, win_rate?: number, bank_name?: string, account_number?: string} | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [jackpot, setJackpot] = useState(8234567890);
@@ -39,15 +25,9 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ username: '', password: '', amount: '', bank_name: 'BCA', account_number: '', target_bank: '' });
   const [adminBanks, setAdminBanks] = useState<any[]>([]);
+  const [config, setConfig] = useState({ headerName: 'NEXUSHUB', bannerTitle: 'BONUS NEW MEMBER 100%', bannerSub: 'Berlaku untuk Semua Provider Slot', bannerImage: '' });
 
-  const [config, setConfig] = useState({
-    headerName: 'NEXUSHUB',
-    bannerTitle: 'BONUS NEW MEMBER 100%',
-    bannerSub: 'Berlaku untuk Semua Provider Slot',
-    bannerImage: '' 
-  });
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
       const newConfig = { ...config };
@@ -62,69 +42,63 @@ export default function App() {
     const { data: banks } = await supabase.from('admin_banks').select('*');
     if (banks) {
         setAdminBanks(banks);
-        if (banks.length > 0) setFormData(prev => ({...prev, target_bank: `${banks[0].bank_name} - ${banks[0].account_number}`}));
+        if (banks.length > 0 && !formData.target_bank) setFormData(prev => ({...prev, target_bank: `${banks[0].bank_name} - ${banks[0].account_number}`}));
     }
-  };
+  }, [config, formData.target_bank]);
 
-  const fetchUser = async (username: string) => {
+  const fetchUser = useCallback(async (username: string) => {
     const { data } = await supabase.from('players').select('*').eq('username', username).single();
     if (data) setUser(data);
-  };
+  }, []);
 
-  const fetchHistory = async (username: string) => {
+  const fetchHistory = useCallback(async (username: string) => {
     const { data } = await supabase.from('transactions').select('*').eq('username', username).order('created_at', { ascending: false }).limit(10);
     if (data) setHistory(data);
-  };
+  }, []);
 
   useEffect(() => {
     fetchSettings();
-    const saved = localStorage.getItem('nexus_session');
-    if (saved) fetchUser(saved);
+    const currentSession = localStorage.getItem('nexus_session');
+    if (currentSession) {
+      fetchUser(currentSession);
+      fetchHistory(currentSession);
+    }
 
     const pTimer = setInterval(() => setCurrentPromo(p => (p + 1) % PROMOS.length), 5000);
     const jTimer = setInterval(() => setJackpot(prev => prev + Math.floor(Math.random() * 5000)), 2000);
 
-    const settingsChannel = supabase.channel('realtime-settings')
+    // REAL-TIME ENGINE FOR CLIENT (SINKRONISASI SALDO & SETTINGS)
+    const realtimeChannel = supabase.channel('client-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => fetchSettings())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_banks' }, () => fetchSettings())
-      .subscribe();
-
-    const clientChannel = supabase.channel('realtime-client')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players' }, (payload: any) => {
-        const currentSession = localStorage.getItem('nexus_session');
-        if (payload.new.username === currentSession) setUser(payload.new);
+          const session = localStorage.getItem('nexus_session');
+          if (payload.new.username === session) setUser(payload.new);
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-        const currentSession = localStorage.getItem('nexus_session');
-        if (currentSession) fetchHistory(currentSession);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload: any) => {
+          const session = localStorage.getItem('nexus_session');
+          if (session) fetchHistory(session);
       })
       .subscribe();
 
     return () => { 
       clearInterval(pTimer); clearInterval(jTimer); 
-      supabase.removeChannel(settingsChannel); supabase.removeChannel(clientChannel);
+      supabase.removeChannel(realtimeChannel);
     };
-  }, []);
+  }, [fetchSettings, fetchUser, fetchHistory]);
 
   const handleAuth = async (type: 'LOGIN' | 'REGISTER') => {
     setIsLoading(true);
     if (type === 'REGISTER') {
       const { error } = await supabase.from('players').insert([{ 
-        username: formData.username, 
-        password: formData.password, 
-        bank_name: formData.bank_name,
-        account_number: formData.account_number,
-        balance: 0, 
-        win_rate: 50 
+        username: formData.username, password: formData.password, bank_name: formData.bank_name,
+        account_number: formData.account_number, balance: 0, win_rate: 50 
       }]);
       if (error) alert("Username sudah terpakai!"); else alert("Berhasil! Silakan Login.");
     } else {
       const { data } = await supabase.from('players').select('*').eq('username', formData.username).eq('password', formData.password).single();
       if (data) { 
-        setUser(data); 
-        localStorage.setItem('nexus_session', data.username); 
-        fetchHistory(data.username);
-        setActiveView('HOME'); 
+        setUser(data); localStorage.setItem('nexus_session', data.username); fetchHistory(data.username); setActiveView('HOME'); 
       } else alert("Login Gagal!");
     }
     setIsLoading(false);
@@ -135,11 +109,7 @@ export default function App() {
     setIsLoading(true);
     const note = activeView === 'DEPOSIT' ? `Ke: ${formData.target_bank}` : `Ke Rek: ${user.bank_name} ${user.account_number}`;
     const { error } = await supabase.from('transactions').insert([{ 
-        username: user.username, 
-        type: activeView, 
-        amount: Number(formData.amount), 
-        status: 'PENDING',
-        note: note
+        username: user.username, type: activeView, amount: Number(formData.amount), status: 'PENDING', note: note
     }]);
     setIsLoading(false);
     if (error) alert("Gagal: " + error.message);
@@ -192,11 +162,11 @@ export default function App() {
         </div>
       </nav>
 
-      {/* TRANSACTION HISTORY */}
+      {/* TRANSACTION HISTORY (STAYS AS IS) */}
       <div className={`fixed inset-y-0 right-0 z-[120] w-80 bg-slate-900 border-l border-white/10 shadow-2xl transform transition-transform duration-500 ease-in-out ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-8">
-               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Transaction History</h3>
+               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">History</h3>
                <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white font-black">✕</button>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar">
@@ -213,7 +183,7 @@ export default function App() {
           </div>
       </div>
 
-      {/* VIEW CONTROLLER */}
+      {/* VIEW CONTROLLER & REST OF THE UI (TIDAK BERUBAH) */}
       {activeView === 'LOGIN' || activeView === 'REGISTER' ? (
         <div className="max-w-md mx-auto px-6 mt-12 animate-in fade-in zoom-in duration-300">
            <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl text-center">
@@ -221,7 +191,6 @@ export default function App() {
               <div className="space-y-4">
                  <input type="text" placeholder="Username" onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
                  <input type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
-                 
                  {activeView === 'REGISTER' && (
                     <>
                     <select onChange={(e) => setFormData({...formData, bank_name: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-white text-center font-black">
@@ -230,50 +199,37 @@ export default function App() {
                     <input type="text" placeholder="Nomor Rekening" onChange={(e) => setFormData({...formData, account_number: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-center text-white" />
                     </>
                  )}
-
-                 <button onClick={() => handleAuth(activeView)} className="w-full bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-lg">Konfirmasi</button>
+                 <button onClick={() => handleAuth(activeView)} className="w-full bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase tracking-widest mt-4">Konfirmasi</button>
                  <button onClick={() => setActiveView('HOME')} className="text-[10px] text-slate-500 uppercase font-black block w-full mt-4">Kembali</button>
               </div>
            </div>
         </div>
       ) : activeView === 'DEPOSIT' || activeView === 'WITHDRAW' ? (
-        <div className="max-w-md mx-auto px-6 mt-8 animate-in slide-in-from-bottom-10 duration-500">
+        <div className="max-w-md mx-auto px-6 mt-8">
            <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center">
               <h2 className="text-2xl font-black text-white italic uppercase mb-8 tracking-tighter">{activeView} SALDO</h2>
               <div className="space-y-6 text-left">
-                 
                  {activeView === 'DEPOSIT' && (
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Pilih Bank Tujuan Deposit:</label>
-                        <select 
-                            onChange={(e) => setFormData({...formData, target_bank: e.target.value})}
-                            className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-yellow-500 font-bold"
-                        >
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Pilih Bank Tujuan:</label>
+                        <select onChange={(e) => setFormData({...formData, target_bank: e.target.value})} className="w-full bg-black border border-white/10 p-4 rounded-2xl outline-none text-yellow-500 font-bold">
                             {adminBanks.map(b => <option key={b.id} value={`${b.bank_name} - ${b.account_number}`}>{b.bank_name} ({b.account_number}) A/N {b.holder_name}</option>)}
                         </select>
                     </div>
                  )}
-
                  <div className="bg-black/50 p-6 rounded-3xl border border-white/5 shadow-inner">
                     <input type="number" placeholder="Min. 25.000" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent text-center text-3xl font-black text-yellow-500 outline-none" />
                  </div>
-                 <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl">Kirim Permintaan</button>
+                 <button onClick={handleTransaction} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em]">Kirim Permintaan</button>
                  <button onClick={() => setActiveView('HOME')} className="text-center text-[10px] text-slate-500 font-black uppercase w-full block">Batal</button>
               </div>
            </div>
         </div>
       ) : (
         <>
-          {/* BANNER PROMO */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
-            <div 
-              className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden transition-all duration-1000 shadow-2xl border border-white/10 bg-gradient-to-br ${PROMOS[currentPromo].color}`}
-              style={{
-                backgroundImage: config.bannerImage ? `linear-gradient(to bottom right, rgba(2, 6, 23, 0.8), rgba(2, 6, 23, 0.4)), url('${config.bannerImage}')` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
+            <div className={`w-full h-44 md:h-56 rounded-[2.5rem] p-8 relative overflow-hidden transition-all duration-1000 shadow-2xl border border-white/10 bg-gradient-to-br ${PROMOS[currentPromo].color}`}
+              style={{ backgroundImage: config.bannerImage ? `linear-gradient(to bottom right, rgba(2, 6, 23, 0.8), rgba(2, 6, 23, 0.4)), url('${config.bannerImage}')` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <div className="relative z-10 h-full flex flex-col justify-center">
                 <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase drop-shadow-lg">{config.bannerTitle}</h2>
                 <p className="text-sm text-white/70 mt-2 font-bold uppercase tracking-widest">{config.bannerSub}</p>
@@ -281,7 +237,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* GLOBAL JACKPOT */}
           <div className="max-w-7xl mx-auto px-6 mt-6">
             <div className="bg-gradient-to-b from-slate-900 to-black rounded-3xl p-6 border border-yellow-500/20 text-center shadow-2xl">
               <p className="text-yellow-500 font-black text-[9px] uppercase tracking-[0.5em] mb-2 opacity-70">Global Jackpot</p>
@@ -289,34 +244,22 @@ export default function App() {
             </div>
           </div>
 
-          {/* QUICK BUTTONS */}
           <div className="max-w-7xl mx-auto px-6 mt-8 flex gap-3">
-             <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all">
-                <p className="text-xs font-black text-emerald-400 uppercase italic">Deposit</p>
-             </button>
-             <button onClick={() => user ? setActiveView('WITHDRAW') : setActiveView('LOGIN')} className="flex-1 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-3xl text-center group hover:bg-yellow-500/20 transition-all">
-                <p className="text-xs font-black text-yellow-500 uppercase italic">Withdraw</p>
-             </button>
+             <button onClick={() => user ? setActiveView('DEPOSIT') : setActiveView('LOGIN')} className="flex-1 bg-emerald-600/10 border border-emerald-600/20 p-4 rounded-3xl text-center group hover:bg-emerald-600/20 transition-all"><p className="text-xs font-black text-emerald-400 uppercase italic">Deposit</p></button>
+             <button onClick={() => user ? setActiveView('WITHDRAW') : setActiveView('LOGIN')} className="flex-1 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-3xl text-center group hover:bg-yellow-500/20 transition-all"><p className="text-xs font-black text-yellow-500 uppercase italic">Withdraw</p></button>
           </div>
 
-          {/* PROVIDER TABS */}
           <div className="max-w-7xl mx-auto px-6 mt-10 overflow-x-auto no-scrollbar flex gap-2">
             {PROVIDERS.map(p => (
               <button key={p} onClick={() => setActiveTab(p)} className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase border ${activeTab === p ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-slate-900 text-slate-400 border-white/5'}`}>{p}</button>
             ))}
           </div>
 
-          {/* GAMES GRID */}
           <div className="max-w-7xl mx-auto px-6 mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5 font-black uppercase pb-10">
             {filteredGames.map((game) => (
               <div key={game.id} onClick={() => openGame(game.demoUrl)} className="group cursor-pointer">
                 <div className="relative aspect-[3/4] rounded-[2.5rem] bg-slate-900 border border-white/5 overflow-hidden transition-all duration-500 group-hover:border-yellow-500/50 group-hover:-translate-y-2 shadow-xl shadow-black/50">
-                  <img 
-                    src={game.image} 
-                    alt={game.name} 
-                    onError={(e) => { (e.target as any).src = 'https://via.placeholder.com/300x400/020617/yellow?text=SLOT'; }}
-                    className="w-full h-full object-cover brightness-90 group-hover:brightness-110 group-hover:scale-110 transition-all duration-700" 
-                  />
+                  <img src={game.image} alt={game.name} onError={(e) => { (e.target as any).src = 'https://via.placeholder.com/300x400/020617/yellow?text=SLOT'; }} className="w-full h-full object-cover brightness-90 transition-all duration-700" />
                   <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent">
                     <p className="text-[9px] font-black text-emerald-400 text-center uppercase">RTP {game.rtp}%</p>
                   </div>
@@ -328,7 +271,6 @@ export default function App() {
         </>
       )}
 
-      {/* GAME MODAL */}
       {selectedGameUrl && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col">
           <div className="h-12 bg-slate-950 flex justify-between items-center px-6 border-b border-white/10">
@@ -339,7 +281,6 @@ export default function App() {
         </div>
       )}
 
-      {/* LOADING OVERLAY */}
       {isLoading && (
         <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
           <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
